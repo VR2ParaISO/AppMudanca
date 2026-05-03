@@ -5,11 +5,36 @@ import { IconMic } from './Icons';
 
 export default function VoiceInputOverlay({ isOpen, onClose, onResult, contextLabel, showEspecificacao = false }) {
   const [isListening, setIsListening] = useState(false);
+  const [isListeningEspec, setIsListeningEspec] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [inputNome, setInputNome] = useState('');
   const [inputEspecificacao, setInputEspecificacao] = useState('');
   const recognitionRef = useRef(null);
   const showEspecificacaoRef = useRef(showEspecificacao);
+
+  const startListeningEspec = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Reconhecimento de voz não suportado neste navegador.");
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = 'pt-BR';
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.onstart = () => setIsListeningEspec(true);
+    rec.onend = () => setIsListeningEspec(false);
+    rec.onerror = () => setIsListeningEspec(false);
+    rec.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      setInputEspecificacao(text);
+    };
+
+    try { rec.start(); } catch (e) {}
+  };
 
   useEffect(() => {
     showEspecificacaoRef.current = showEspecificacao;
@@ -131,13 +156,23 @@ export default function VoiceInputOverlay({ isOpen, onClose, onResult, contextLa
             {showEspecificacao && (
               <>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação (opcional)</label>
-                <input 
-                  className="input-brutal"
-                  value={inputEspecificacao}
-                  onChange={(e) => setInputEspecificacao(e.target.value)}
-                  placeholder="Ex: segunda gaveta, embaixo..."
-                  style={{ marginTop: '4px' }}
-                />
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <input 
+                    className="input-brutal"
+                    value={inputEspecificacao}
+                    onChange={(e) => setInputEspecificacao(e.target.value)}
+                    placeholder="Ex: segunda gaveta, embaixo..."
+                    style={{ flex: 1 }}
+                  />
+                  <button 
+                    type="button"
+                    className="edit-btn" 
+                    style={{ backgroundColor: isListeningEspec ? 'var(--blue)' : 'var(--cyan)' }}
+                    onClick={startListeningEspec}
+                  >
+                    <IconMic />
+                  </button>
+                </div>
               </>
             )}
           </div>
