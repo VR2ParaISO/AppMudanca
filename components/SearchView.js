@@ -5,6 +5,31 @@ import { IconMic } from './Icons';
 
 export default function SearchView({ itens, locais, comodos }) {
   const [query, setQuery] = useState('');
+  const [isListening, setIsListening] = useState(false);
+
+  const startListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Reconhecimento de voz não suportado neste navegador.");
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = 'pt-BR';
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.onstart = () => setIsListening(true);
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false);
+    rec.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      setQuery(text);
+    };
+
+    try { rec.start(); } catch (e) {}
+  };
 
   const results = query.trim() 
     ? itens.filter(i => 
@@ -28,13 +53,24 @@ export default function SearchView({ itens, locais, comodos }) {
         </p>
       </div>
       
-      <input 
-        className="input-brutal"
-        placeholder="O que você está procurando?"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        id="search-input"
-      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input 
+          className="input-brutal"
+          placeholder="O que você está procurando?"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          id="search-input"
+          style={{ flex: 1 }}
+        />
+        <button 
+          type="button"
+          className="edit-btn" 
+          style={{ backgroundColor: isListening ? 'var(--blue)' : 'var(--cyan)' }}
+          onClick={startListening}
+        >
+          <IconMic />
+        </button>
+      </div>
 
       <div style={{ marginTop: '24px' }}>
         {query && results.length === 0 && (
