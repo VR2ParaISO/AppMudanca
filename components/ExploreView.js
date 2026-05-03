@@ -1,17 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { IconBack, IconDelete } from './Icons';
+import { IconBack, IconDelete, IconEdit } from './Icons';
 
 export default function ExploreView({ 
   comodos, locais, itens, 
-  addComodo, addLocal, addItem, deleteItem,
+  addComodo, addLocal, addItem, deleteItem, rename, updateItem,
   level, setLevel,
   currentComodo, setCurrentComodo,
   currentLocal, setCurrentLocal
 }) {
   const [inputValue, setInputValue] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState(null); // { type, id, name }
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [pendingItem, setPendingItem] = useState(null); // { nome } - awaiting especificacao
+  const [especInput, setEspecInput] = useState('');
+  const [editingItem, setEditingItem] = useState(null); // { type, id, nome, especificacao }
+  const [editNomeInput, setEditNomeInput] = useState('');
+  const [editEspecInput, setEditEspecInput] = useState('');
 
   const handleBack = () => {
     if (level === 2) setLevel(1);
@@ -26,21 +31,32 @@ export default function ExploreView({
 
     if (level === 1) {
       addComodo(val);
+      setInputValue('');
     } else if (level === 2 && currentComodo) {
       addLocal(currentComodo.id, val);
+      setInputValue('');
     } else if (level === 3 && currentLocal) {
-      // Parse "item, especificacao"
-      let nome = val;
-      let especificacao = '';
-      if (val.includes(',')) {
-        const parts = val.split(',');
-        nome = parts[0].trim();
-        especificacao = parts.slice(1).join(',').trim();
-      }
-      addItem(currentLocal.id, nome, especificacao);
+      // Show especificacao dialog instead of saving directly
+      setPendingItem({ nome: val });
+      setEspecInput('');
+      setInputValue('');
     }
+  };
 
-    setInputValue('');
+  const handleSaveItem = () => {
+    if (pendingItem && currentLocal) {
+      addItem(currentLocal.id, pendingItem.nome, especInput.trim());
+      setPendingItem(null);
+      setEspecInput('');
+    }
+  };
+
+  const handleSkipEspec = () => {
+    if (pendingItem && currentLocal) {
+      addItem(currentLocal.id, pendingItem.nome, '');
+      setPendingItem(null);
+      setEspecInput('');
+    }
   };
 
   const handleDeleteConfirm = () => {
@@ -50,13 +66,31 @@ export default function ExploreView({
     }
   };
 
+  const handleEditClick = (type, item) => {
+    setEditingItem({ type, id: item.id });
+    setEditNomeInput(item.nome);
+    setEditEspecInput(item.especificacao || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingItem) return;
+    if (!editNomeInput.trim()) return;
+
+    if (editingItem.type === 'itens') {
+      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim());
+    } else {
+      rename(editingItem.type, editingItem.id, editNomeInput.trim());
+    }
+    setEditingItem(null);
+  };
+
   const getLocaisCount = (comodoId) => locais.filter(l => l.comodo_id === comodoId).length;
   const getItensCount = (localId) => itens.filter(i => i.local_id === localId).length;
 
   const placeholders = {
     1: "Nome do cômodo...",
     2: "Nome do local (ex: Armário, Gaveta)...",
-    3: "Nome do item (ou \"item, detalhe\")..."
+    3: "Nome do item..."
   };
 
   const emptyMessages = {
@@ -125,6 +159,12 @@ export default function ExploreView({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="badge badge-cyan">{getLocaisCount(c.id)}</span>
               <button 
+                className="edit-btn"
+                onClick={(e) => { e.stopPropagation(); handleEditClick('comodos', c); }}
+              >
+                <IconEdit />
+              </button>
+              <button 
                 className="delete-btn"
                 onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'comodos', id: c.id, name: c.nome }); }}
               >
@@ -141,6 +181,12 @@ export default function ExploreView({
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="badge badge-yellow">{getItensCount(l.id)}</span>
+              <button 
+                className="edit-btn"
+                onClick={(e) => { e.stopPropagation(); handleEditClick('locais', l); }}
+              >
+                <IconEdit />
+              </button>
               <button 
                 className="delete-btn"
                 onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'locais', id: l.id, name: l.nome }); }}
@@ -161,15 +207,77 @@ export default function ExploreView({
                 </div>
               )}
             </div>
-            <button 
-              className="delete-btn"
-              onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'itens', id: i.id, name: i.nome }); }}
-            >
-              <IconDelete />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                className="edit-btn"
+                onClick={(e) => { e.stopPropagation(); handleEditClick('itens', i); }}
+              >
+                <IconEdit />
+              </button>
+              <button 
+                className="delete-btn"
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'itens', id: i.id, name: i.nome }); }}
+              >
+                <IconDelete />
+              </button>
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Especificação Dialog - appears after adding an item name */}
+      {pendingItem && (
+        <div className="confirm-overlay" onClick={handleSkipEspec}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
+            <h3 style={{ marginBottom: '4px' }}>"{pendingItem.nome}"</h3>
+            <p style={{ marginBottom: '16px' }}>Onde exatamente está este item?</p>
+            <input 
+              className="input-brutal"
+              placeholder="Ex: segunda gaveta, embaixo, lado esquerdo..."
+              value={especInput}
+              onChange={(e) => setEspecInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveItem(); }}}
+              autoFocus
+              style={{ marginBottom: '16px' }}
+            />
+            <div className="confirm-actions">
+              <button className="btn-cyan" onClick={handleSkipEspec}>Pular</button>
+              <button className="btn-lime" onClick={handleSaveItem}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      {editingItem && (
+        <div className="confirm-overlay" onClick={() => setEditingItem(null)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
+            <h3 style={{ marginBottom: '16px' }}>Editar {editingItem.type === 'itens' ? 'Item' : editingItem.type === 'locais' ? 'Local' : 'Cômodo'}</h3>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Nome</label>
+            <input 
+              className="input-brutal"
+              value={editNomeInput}
+              onChange={(e) => setEditNomeInput(e.target.value)}
+              style={{ marginBottom: '16px', marginTop: '4px' }}
+            />
+            {editingItem.type === 'itens' && (
+              <>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação</label>
+                <input 
+                  className="input-brutal"
+                  value={editEspecInput}
+                  onChange={(e) => setEditEspecInput(e.target.value)}
+                  style={{ marginBottom: '16px', marginTop: '4px' }}
+                />
+              </>
+            )}
+            <div className="confirm-actions">
+              <button className="btn-cyan" onClick={() => setEditingItem(null)}>Cancelar</button>
+              <button className="btn-lime" onClick={handleSaveEdit}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Delete Dialog */}
       {confirmDelete && (

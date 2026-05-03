@@ -375,6 +375,19 @@ main {
   box-shadow: none !important;
 }
 
+/* ===== EDIT BUTTON ===== */
+.edit-btn {
+  padding: 8px !important;
+  box-shadow: 2px 2px 0px black !important;
+  flex-shrink: 0;
+  background: var(--cyan) !important;
+  color: var(--black);
+}
+
+.edit-btn:active {
+  box-shadow: none !important;
+}
+
 /* ===== CONFIRM DIALOG ===== */
 .confirm-overlay {
   position: fixed;

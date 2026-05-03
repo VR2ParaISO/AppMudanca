@@ -95,7 +95,20 @@ export function useDatabase() {
 
     const setter = type === 'comodos' ? setComodos : type === 'locais' ? setLocais : setItens;
     setter(prev =>
-      prev.map(item => item.id === id ? { ...item, nome: newNome } : item)
+      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase() } : item)
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+    );
+  }, []);
+
+  // ===== UPDATE ITEM (nome + especificacao) =====
+  const updateItem = useCallback(async (id, newNome, newEspecificacao) => {
+    const { error } = await supabase.from('itens')
+      .update({ nome: newNome.toUpperCase(), especificacao: newEspecificacao })
+      .eq('id', id);
+    if (error) { console.error('updateItem error:', error); return; }
+
+    setItens(prev =>
+      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase(), especificacao: newEspecificacao } : item)
         .sort((a, b) => a.nome.localeCompare(b.nome))
     );
   }, []);
@@ -115,6 +128,7 @@ export function useDatabase() {
     addItem,
     deleteItem,
     rename,
+    updateItem,
     getStats,
     isLoaded,
   };

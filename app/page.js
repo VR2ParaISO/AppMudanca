@@ -70,6 +70,8 @@ export default function Home() {
           addLocal={db.addLocal}
           addItem={db.addItem}
           deleteItem={db.deleteItem}
+          rename={db.rename}
+          updateItem={db.updateItem}
           level={level}
           setLevel={setLevel}
           currentComodo={currentComodo}
