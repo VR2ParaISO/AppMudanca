@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconBack, IconDelete, IconEdit } from './Icons';
+import { IconBack, IconDelete, IconEdit, IconMic } from './Icons';
 
 export default function ExploreView({ 
   comodos, locais, itens, 
@@ -17,6 +17,35 @@ export default function ExploreView({
   const [editingItem, setEditingItem] = useState(null); // { type, id, nome, especificacao }
   const [editNomeInput, setEditNomeInput] = useState('');
   const [editEspecInput, setEditEspecInput] = useState('');
+  const [isListeningFor, setIsListeningFor] = useState(null); // 'add' ou 'edit'
+
+  const startSpecificListening = (target) => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Reconhecimento de voz não suportado neste navegador.");
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = 'pt-BR';
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.onstart = () => setIsListeningFor(target);
+    rec.onend = () => setIsListeningFor(null);
+    rec.onerror = () => setIsListeningFor(null);
+    rec.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      if (target === 'add') {
+        setEspecInput(text);
+      } else if (target === 'edit') {
+        setEditEspecInput(text);
+      }
+    };
+
+    try { rec.start(); } catch (e) {}
+  };
 
   const handleBack = () => {
     if (level === 2) setLevel(1);
@@ -231,15 +260,25 @@ export default function ExploreView({
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
             <h3 style={{ marginBottom: '4px' }}>"{pendingItem.nome}"</h3>
             <p style={{ marginBottom: '16px' }}>Onde exatamente está este item?</p>
-            <input 
-              className="input-brutal"
-              placeholder="Ex: segunda gaveta, embaixo, lado esquerdo..."
-              value={especInput}
-              onChange={(e) => setEspecInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveItem(); }}}
-              autoFocus
-              style={{ marginBottom: '16px' }}
-            />
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <input 
+                className="input-brutal"
+                placeholder="Ex: segunda gaveta..."
+                value={especInput}
+                onChange={(e) => setEspecInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveItem(); }}}
+                autoFocus
+                style={{ flex: 1 }}
+              />
+              <button 
+                type="button"
+                className="edit-btn" 
+                style={{ backgroundColor: isListeningFor === 'add' ? 'var(--blue)' : 'var(--cyan)' }}
+                onClick={() => startSpecificListening('add')}
+              >
+                <IconMic />
+              </button>
+            </div>
             <div className="confirm-actions">
               <button className="btn-cyan" onClick={handleSkipEspec}>Pular</button>
               <button className="btn-lime" onClick={handleSaveItem}>Salvar</button>
@@ -263,12 +302,22 @@ export default function ExploreView({
             {editingItem.type === 'itens' && (
               <>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação</label>
-                <input 
-                  className="input-brutal"
-                  value={editEspecInput}
-                  onChange={(e) => setEditEspecInput(e.target.value)}
-                  style={{ marginBottom: '16px', marginTop: '4px' }}
-                />
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
+                  <input 
+                    className="input-brutal"
+                    value={editEspecInput}
+                    onChange={(e) => setEditEspecInput(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button 
+                    type="button"
+                    className="edit-btn" 
+                    style={{ backgroundColor: isListeningFor === 'edit' ? 'var(--blue)' : 'var(--cyan)' }}
+                    onClick={() => startSpecificListening('edit')}
+                  >
+                    <IconMic />
+                  </button>
+                </div>
               </>
             )}
             <div className="confirm-actions">
