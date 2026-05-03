@@ -84,6 +84,12 @@ export default function Home() {
           itens={db.itens}
           locais={db.locais}
           comodos={db.comodos}
+          onNavigate={(targetLevel, c, l) => {
+            if (c) setCurrentComodo(c);
+            if (l) setCurrentLocal(l);
+            setLevel(targetLevel);
+            setActiveTab('explore');
+          }}
         />
       )}
 

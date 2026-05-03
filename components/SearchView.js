@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { IconMic } from './Icons';
 
-export default function SearchView({ itens, locais, comodos }) {
+export default function SearchView({ itens, locais, comodos, onNavigate }) {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
 
@@ -41,7 +41,7 @@ export default function SearchView({ itens, locais, comodos }) {
     const matchedLocais = locais.filter(l => l.nome.toLowerCase().includes(q))
       .map(l => {
         const comodo = comodos.find(c => c.id === l.comodo_id);
-        return { ...l, searchType: 'local', title: l.nome, hierarchy: `${comodo?.nome || '—'}` };
+        return { ...l, searchType: 'local', title: l.nome, hierarchy: `${comodo?.nome || '—'}`, comodoObj: comodo };
       });
       
     const matchedItens = itens.filter(i => 
@@ -50,7 +50,7 @@ export default function SearchView({ itens, locais, comodos }) {
       ).map(item => {
         const local = locais.find(l => l.id === item.local_id);
         const comodo = comodos.find(c => c.id === local?.comodo_id);
-        return { ...item, searchType: 'item', title: item.nome, hierarchy: `${comodo?.nome || '—'} › ${local?.nome || '—'}` };
+        return { ...item, searchType: 'item', title: item.nome, hierarchy: `${comodo?.nome || '—'} › ${local?.nome || '—'}`, localObj: local, comodoObj: comodo };
       });
       
     results = [...matchedComodos, ...matchedLocais, ...matchedItens];
@@ -94,24 +94,41 @@ export default function SearchView({ itens, locais, comodos }) {
           </div>
         )}
 
-        {results.map(res => (
-          <div key={`${res.searchType}-${res.id}`} className="card card-static search-result">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
-              <span className={`badge ${res.searchType === 'comodo' ? 'badge-cyan' : res.searchType === 'local' ? 'badge-yellow' : ''}`} style={{ fontSize: '0.7rem' }}>
-                {res.searchType === 'comodo' ? 'Cômodo' : res.searchType === 'local' ? 'Local' : 'Item'}
-              </span>
-            </div>
-            {res.searchType === 'item' && res.especificacao && (
-              <div className="spec-tag">
-                <small>📍</small>{res.especificacao}
+        {results.map(res => {
+          const handleResultClick = () => {
+            if (res.searchType === 'comodo') {
+              onNavigate(2, res, null);
+            } else if (res.searchType === 'local') {
+              onNavigate(3, res.comodoObj, res);
+            } else if (res.searchType === 'item') {
+              onNavigate(3, res.comodoObj, res.localObj);
+            }
+          };
+
+          return (
+            <div 
+              key={`${res.searchType}-${res.id}`} 
+              className="card card-static search-result"
+              onClick={handleResultClick}
+              style={{ cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
+                <span className={`badge ${res.searchType === 'comodo' ? 'badge-cyan' : res.searchType === 'local' ? 'badge-yellow' : ''}`} style={{ fontSize: '0.7rem' }}>
+                  {res.searchType === 'comodo' ? 'Cômodo' : res.searchType === 'local' ? 'Local' : 'Item'}
+                </span>
               </div>
-            )}
-            <div className="hierarchy">
-              {res.hierarchy}
+              {res.searchType === 'item' && res.especificacao && (
+                <div className="spec-tag">
+                  <small>📍</small>{res.especificacao}
+                </div>
+              )}
+              <div className="hierarchy">
+                {res.hierarchy}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {!query && (
           <div className="empty-state">
