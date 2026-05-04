@@ -10,8 +10,9 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('fotos', 'fotos', true) -- O bucket é "público" para leitura rápida via URL, mas as políticas abaixo controlam o resto
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Habilitar RLS na tabela de objetos do Storage
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- 3. Habilitar RLS na tabela de objetos do Storage 
+-- (NOTA: O Supabase já deixa isso habilitado por padrão. A linha abaixo foi comentada pois pode causar erro de permissão dependendo da sua versão)
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- 4. Políticas de Segurança (Storage) para garantir o isolamento (Tenant)
 -- O usuário logado só pode enviar, atualizar e deletar fotos dentro de uma pasta com o seu próprio ID (ex: fotos/uuid_do_usuario/foto.jpg)

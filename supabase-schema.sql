@@ -7,6 +7,7 @@ create table if not exists comodos (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users(id) default auth.uid(),
   nome text not null,
+  foto_url text,
   created_at timestamptz default now()
 );
 
@@ -17,6 +18,7 @@ create table if not exists locais (
   parent_local_id uuid references locais(id) on delete cascade,
   user_id uuid references auth.users(id) default auth.uid(),
   nome text not null,
+  foto_url text,
   created_at timestamptz default now()
 );
 

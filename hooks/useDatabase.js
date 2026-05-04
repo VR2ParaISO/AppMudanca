@@ -7,7 +7,6 @@ export function useDatabase(user) {
   const [itens, setItens] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load all data when user changes
   useEffect(() => {
     if (user) {
       loadAll();
@@ -49,6 +48,39 @@ export function useDatabase(user) {
     return data;
   }, []);
 
+  const updateComodo = useCallback(async (id, newNome, newFotoBlob = null) => {
+    let updatePayload = { nome: newNome.toUpperCase() };
+    
+    if (newFotoBlob && user) {
+      const fileName = `${user.id}/comodos/${crypto.randomUUID()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, newFotoBlob, { contentType: 'image/jpeg' });
+      
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
+        updatePayload.foto_url = publicUrlData.publicUrl;
+
+        // Tentar apagar a foto antiga
+        const oldComodo = comodos.find(c => c.id === id);
+        if (oldComodo && oldComodo.foto_url) {
+          const path = oldComodo.foto_url.split('/public/fotos/')[1];
+          if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+        }
+      }
+    }
+
+    const { error } = await supabase.from('comodos')
+      .update(updatePayload)
+      .eq('id', id);
+    if (error) { console.error('updateComodo error:', error); return; }
+
+    setComodos(prev =>
+      prev.map(c => c.id === id ? { ...c, ...updatePayload } : c)
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+    );
+  }, [user, comodos]);
+
   // ===== LOCAIS =====
   const addLocal = useCallback(async (comodoId, nome) => {
     if (!comodoId) { console.error('Missing comodoId'); return; }
@@ -63,6 +95,39 @@ export function useDatabase(user) {
     setLocais(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
     return data;
   }, []);
+
+  const updateLocal = useCallback(async (id, newNome, parentLocalId, newFotoBlob = null) => {
+    let updatePayload = { nome: newNome.toUpperCase(), parent_local_id: parentLocalId };
+
+    if (newFotoBlob && user) {
+      const fileName = `${user.id}/locais/${crypto.randomUUID()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, newFotoBlob, { contentType: 'image/jpeg' });
+      
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
+        updatePayload.foto_url = publicUrlData.publicUrl;
+
+        // Tentar apagar a foto antiga
+        const oldLocal = locais.find(l => l.id === id);
+        if (oldLocal && oldLocal.foto_url) {
+          const path = oldLocal.foto_url.split('/public/fotos/')[1];
+          if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+        }
+      }
+    }
+
+    const { error } = await supabase.from('locais')
+      .update(updatePayload)
+      .eq('id', id);
+    if (error) { console.error('updateLocal error:', error); return; }
+
+    setLocais(prev =>
+      prev.map(l => l.id === id ? { ...l, ...updatePayload } : l)
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+    );
+  }, [user, locais]);
 
   // ===== ITENS =====
   const addItem = useCallback(async (localId, nome, especificacao = '', fotoBlob = null) => {
@@ -92,49 +157,6 @@ export function useDatabase(user) {
     return data;
   }, [user]);
 
-  // ===== DELETE =====
-  const deleteItem = useCallback(async (type, id) => {
-    // Apagar foto correspondente no Storage, se for item
-    if (type === 'itens') {
-      const itemToDelete = itens.find(i => i.id === id);
-      if (itemToDelete && itemToDelete.foto_url) {
-        const path = itemToDelete.foto_url.split('/public/fotos/')[1];
-        if (path) {
-          // Fire and forget
-          supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing photo", err));
-        }
-      }
-    }
-
-    const { error } = await supabase.from(type).delete().eq('id', id);
-    if (error) { console.error('delete error:', error); return; }
-
-    if (type === 'comodos') {
-      const affectedLocais = locais.filter(l => l.comodo_id === id).map(l => l.id);
-      setComodos(prev => prev.filter(c => c.id !== id));
-      setLocais(prev => prev.filter(l => l.comodo_id !== id));
-      setItens(prev => prev.filter(i => !affectedLocais.includes(i.local_id)));
-    } else if (type === 'locais') {
-      setLocais(prev => prev.filter(l => l.id !== id && l.parent_local_id !== id));
-      setItens(prev => prev.filter(i => i.local_id !== id));
-    } else if (type === 'itens') {
-      setItens(prev => prev.filter(i => i.id !== id));
-    }
-  }, [locais, itens]);
-
-  // ===== RENAME =====
-  const rename = useCallback(async (type, id, newNome) => {
-    const { error } = await supabase.from(type).update({ nome: newNome.toUpperCase() }).eq('id', id);
-    if (error) { console.error('rename error:', error); return; }
-
-    const setter = type === 'comodos' ? setComodos : type === 'locais' ? setLocais : setItens;
-    setter(prev =>
-      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase() } : item)
-        .sort((a, b) => a.nome.localeCompare(b.nome))
-    );
-  }, []);
-
-  // ===== UPDATE ITEM (nome + especificacao + foto) =====
   const updateItem = useCallback(async (id, newNome, newEspecificacao, newFotoBlob = null) => {
     let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao };
     
@@ -148,7 +170,6 @@ export function useDatabase(user) {
         const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
         updatePayload.foto_url = publicUrlData.publicUrl;
 
-        // Tentar apagar a foto antiga
         const oldItem = itens.find(i => i.id === id);
         if (oldItem && oldItem.foto_url) {
           const path = oldItem.foto_url.split('/public/fotos/')[1];
@@ -168,15 +189,43 @@ export function useDatabase(user) {
     );
   }, [user, itens]);
 
-  // ===== UPDATE LOCAL (nome + parent) =====
-  const updateLocal = useCallback(async (id, newNome, parentLocalId) => {
-    const { error } = await supabase.from('locais')
-      .update({ nome: newNome.toUpperCase(), parent_local_id: parentLocalId })
-      .eq('id', id);
-    if (error) { console.error('updateLocal error:', error); return; }
 
-    setLocais(prev =>
-      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase(), parent_local_id: parentLocalId } : item)
+  // ===== DELETE =====
+  const deleteItem = useCallback(async (type, id) => {
+    // Apagar foto correspondente no Storage
+    const list = type === 'comodos' ? comodos : type === 'locais' ? locais : itens;
+    const itemToDelete = list.find(i => i.id === id);
+    if (itemToDelete && itemToDelete.foto_url) {
+      const path = itemToDelete.foto_url.split('/public/fotos/')[1];
+      if (path) {
+        supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing photo", err));
+      }
+    }
+
+    const { error } = await supabase.from(type).delete().eq('id', id);
+    if (error) { console.error('delete error:', error); return; }
+
+    if (type === 'comodos') {
+      const affectedLocais = locais.filter(l => l.comodo_id === id).map(l => l.id);
+      setComodos(prev => prev.filter(c => c.id !== id));
+      setLocais(prev => prev.filter(l => l.comodo_id !== id));
+      setItens(prev => prev.filter(i => !affectedLocais.includes(i.local_id)));
+    } else if (type === 'locais') {
+      setLocais(prev => prev.filter(l => l.id !== id && l.parent_local_id !== id));
+      setItens(prev => prev.filter(i => i.local_id !== id));
+    } else if (type === 'itens') {
+      setItens(prev => prev.filter(i => i.id !== id));
+    }
+  }, [locais, itens, comodos]);
+
+  // ===== RENAME ===== (mantido por retrocompatibilidade se necessário, mas updateComodo e updateLocal são preferíveis agora)
+  const rename = useCallback(async (type, id, newNome) => {
+    const { error } = await supabase.from(type).update({ nome: newNome.toUpperCase() }).eq('id', id);
+    if (error) { console.error('rename error:', error); return; }
+
+    const setter = type === 'comodos' ? setComodos : type === 'locais' ? setLocais : setItens;
+    setter(prev =>
+      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase() } : item)
         .sort((a, b) => a.nome.localeCompare(b.nome))
     );
   }, []);
@@ -192,12 +241,13 @@ export function useDatabase(user) {
     locais,
     itens,
     addComodo,
+    updateComodo,
     addLocal,
+    updateLocal,
     addItem,
+    updateItem,
     deleteItem,
     rename,
-    updateItem,
-    updateLocal,
     getStats,
     isLoaded,
   };

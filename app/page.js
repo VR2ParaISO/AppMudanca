@@ -84,6 +84,7 @@ export default function Home() {
           rename={db.rename}
           updateItem={db.updateItem}
           updateLocal={db.updateLocal}
+          updateComodo={db.updateComodo}
           level={level}
           setLevel={setLevel}
           currentComodo={currentComodo}

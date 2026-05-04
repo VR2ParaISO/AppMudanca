@@ -6,7 +6,7 @@ import { compressImage } from '../utils/image';
 
 export default function ExploreView({ 
   comodos, locais, itens, 
-  addComodo, addLocal, addItem, deleteItem, rename, updateItem, updateLocal,
+  addComodo, addLocal, addItem, deleteItem, rename, updateItem, updateLocal, updateComodo,
   level, setLevel,
   currentComodo, setCurrentComodo,
   currentLocal, setCurrentLocal
@@ -143,10 +143,10 @@ export default function ExploreView({
     setEditNomeInput(item.nome);
     setEditEspecInput(item.especificacao || '');
     setEditParentIdInput(item.parent_local_id || '');
-    if (type === 'itens') {
-      setFotoPreview(item.foto_url || null);
-      setFotoBlob(null);
-    }
+    
+    // Todas as entidades agora suportam foto
+    setFotoPreview(item.foto_url || null);
+    setFotoBlob(null);
   };
 
   const handleSaveEdit = () => {
@@ -156,7 +156,9 @@ export default function ExploreView({
     if (editingItem.type === 'itens') {
       updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob);
     } else if (editingItem.type === 'locais') {
-      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null);
+      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, fotoBlob);
+    } else if (editingItem.type === 'comodos') {
+      updateComodo(editingItem.id, editNomeInput.trim(), fotoBlob);
     } else {
       rename(editingItem.type, editingItem.id, editNomeInput.trim());
     }
@@ -272,11 +274,16 @@ export default function ExploreView({
           </div>
         )}
 
-        {/* Level 1 */}
+        {/* Level 1: Comodos */}
         {level === 1 && currentComodos.map(c => (
           <div key={c.id} className="card flex-between" onClick={() => { setCurrentComodo(c); setLevel(2); }}>
+            {c.foto_url && (
+              <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(c.foto_url, '_blank'); }} />
+              </div>
+            )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
+              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{c.nome}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="badge badge-cyan">{getLocaisCount(c.id)}</span>
@@ -286,12 +293,17 @@ export default function ExploreView({
           </div>
         ))}
 
-        {/* Level 2 */}
+        {/* Level 2: Top Locais */}
         {level === 2 && currentLocaisTop.map(l => (
           <div key={l.id} className="card flex-between" onClick={() => { setCurrentLocal(l); setLevel(3); }}>
+            {l.foto_url && (
+              <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(l.foto_url, '_blank'); }} />
+              </div>
+            )}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1.15rem' }}>📦</span>
-              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.nome}</span>
+              {!l.foto_url && <span style={{ fontSize: '1.15rem' }}>📦</span>}
+              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{l.nome}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="badge badge-yellow">{getItensCount(l.id)}</span>
@@ -301,14 +313,19 @@ export default function ExploreView({
           </div>
         ))}
 
-        {/* Level 3 */}
+        {/* Level 3: Sub Locais AND Itens */}
         {level === 3 && (
           <>
             {currentLocaisSub.map(l => (
               <div key={l.id} className="card flex-between" onClick={() => setCurrentLocal(l)} style={{ borderLeft: '10px solid var(--lime)' }}>
+                {l.foto_url && (
+                  <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                    <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(l.foto_url, '_blank'); }} />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.15rem' }}>📦</span>
-                  <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.nome}</span>
+                  {!l.foto_url && <span style={{ fontSize: '1.15rem' }}>📦</span>}
+                  <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{l.nome}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className="badge badge-yellow">{getItensCount(l.id)}</span>
@@ -322,7 +339,7 @@ export default function ExploreView({
               <div key={i.id} className="card card-static flex-between">
                 {i.foto_url && (
                   <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden' }}>
-                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(i.foto_url, '_blank')} />
+                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(i.foto_url, '_blank'); }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -404,7 +421,7 @@ export default function ExploreView({
         </div>
       )}
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog (Comodos, Locais, Itens) */}
       {editingItem && (
         <div className="confirm-overlay" onClick={() => { setEditingItem(null); resetFoto(); }}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
@@ -453,36 +470,37 @@ export default function ExploreView({
                     <IconMic />
                   </button>
                 </div>
-
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>Foto do Item</label>
-                
-                {fotoPreview && (
-                  <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
-                    <img src={fotoPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', border: '2px solid var(--black)' }} />
-                  </div>
-                )}
-
-                <div style={{ marginBottom: '16px', marginTop: '8px' }}>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment" 
-                    id="camera-input-edit" 
-                    style={{ display: 'none' }} 
-                    onChange={handleFileChange}
-                    ref={fileInputRefEdit}
-                  />
-                  <button 
-                    type="button" 
-                    className="btn-yellow" 
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    onClick={() => fileInputRefEdit.current?.click()}
-                  >
-                    <IconCamera /> {fotoPreview ? "Substituir Foto" : "Adicionar Foto"}
-                  </button>
-                </div>
               </>
             )}
+            
+            {/* Secao de Foto para todas as entidades */}
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>Foto</label>
+            
+            {fotoPreview && (
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
+                <img src={fotoPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', border: '2px solid var(--black)', borderRadius: 'var(--radius)' }} />
+              </div>
+            )}
+
+            <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                id="camera-input-edit" 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange}
+                ref={fileInputRefEdit}
+              />
+              <button 
+                type="button" 
+                className="btn-yellow" 
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                onClick={() => fileInputRefEdit.current?.click()}
+              >
+                <IconCamera /> {fotoPreview ? "Substituir Foto" : "Adicionar Foto"}
+              </button>
+            </div>
             
             <div className="confirm-actions">
               <button className="btn-cyan" onClick={() => { setEditingItem(null); resetFoto(); }}>Cancelar</button>

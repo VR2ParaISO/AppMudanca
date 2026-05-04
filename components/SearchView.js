@@ -114,8 +114,8 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {res.searchType === 'item' && res.foto_url && (
-                    <div style={{ width: '40px', height: '40px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden' }}>
+                  {res.foto_url && (
+                    <div style={{ width: '40px', height: '40px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden', borderRadius: res.searchType === 'item' ? '0' : 'var(--radius)' }}>
                       <img src={res.foto_url} alt={res.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(res.foto_url, '_blank'); }} />
                     </div>
                   )}
