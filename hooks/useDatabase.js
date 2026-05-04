@@ -65,20 +65,47 @@ export function useDatabase(user) {
   }, []);
 
   // ===== ITENS =====
-  const addItem = useCallback(async (localId, nome, especificacao = '') => {
+  const addItem = useCallback(async (localId, nome, especificacao = '', fotoBlob = null) => {
+    let foto_url = null;
+    if (fotoBlob && user) {
+      const fileName = `${user.id}/${crypto.randomUUID()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, fotoBlob, { contentType: 'image/jpeg' });
+      
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
+        foto_url = publicUrlData.publicUrl;
+      } else {
+        console.error('Upload error:', uploadError);
+      }
+    }
+
     const { data, error } = await supabase
       .from('itens')
-      .insert({ local_id: localId, nome: nome.toUpperCase(), especificacao })
+      .insert({ local_id: localId, nome: nome.toUpperCase(), especificacao, foto_url })
       .select()
       .single();
 
     if (error) { console.error('addItem error:', error); return; }
     setItens(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
     return data;
-  }, []);
+  }, [user]);
 
   // ===== DELETE =====
   const deleteItem = useCallback(async (type, id) => {
+    // Apagar foto correspondente no Storage, se for item
+    if (type === 'itens') {
+      const itemToDelete = itens.find(i => i.id === id);
+      if (itemToDelete && itemToDelete.foto_url) {
+        const path = itemToDelete.foto_url.split('/public/fotos/')[1];
+        if (path) {
+          // Fire and forget
+          supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing photo", err));
+        }
+      }
+    }
+
     const { error } = await supabase.from(type).delete().eq('id', id);
     if (error) { console.error('delete error:', error); return; }
 
@@ -88,12 +115,12 @@ export function useDatabase(user) {
       setLocais(prev => prev.filter(l => l.comodo_id !== id));
       setItens(prev => prev.filter(i => !affectedLocais.includes(i.local_id)));
     } else if (type === 'locais') {
-      setLocais(prev => prev.filter(l => l.id !== id));
+      setLocais(prev => prev.filter(l => l.id !== id && l.parent_local_id !== id));
       setItens(prev => prev.filter(i => i.local_id !== id));
     } else if (type === 'itens') {
       setItens(prev => prev.filter(i => i.id !== id));
     }
-  }, [locais]);
+  }, [locais, itens]);
 
   // ===== RENAME =====
   const rename = useCallback(async (type, id, newNome) => {
@@ -107,18 +134,39 @@ export function useDatabase(user) {
     );
   }, []);
 
-  // ===== UPDATE ITEM (nome + especificacao) =====
-  const updateItem = useCallback(async (id, newNome, newEspecificacao) => {
+  // ===== UPDATE ITEM (nome + especificacao + foto) =====
+  const updateItem = useCallback(async (id, newNome, newEspecificacao, newFotoBlob = null) => {
+    let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao };
+    
+    if (newFotoBlob && user) {
+      const fileName = `${user.id}/${crypto.randomUUID()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, newFotoBlob, { contentType: 'image/jpeg' });
+      
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
+        updatePayload.foto_url = publicUrlData.publicUrl;
+
+        // Tentar apagar a foto antiga
+        const oldItem = itens.find(i => i.id === id);
+        if (oldItem && oldItem.foto_url) {
+          const path = oldItem.foto_url.split('/public/fotos/')[1];
+          if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+        }
+      }
+    }
+
     const { error } = await supabase.from('itens')
-      .update({ nome: newNome.toUpperCase(), especificacao: newEspecificacao })
+      .update(updatePayload)
       .eq('id', id);
     if (error) { console.error('updateItem error:', error); return; }
 
     setItens(prev =>
-      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase(), especificacao: newEspecificacao } : item)
+      prev.map(item => item.id === id ? { ...item, ...updatePayload } : item)
         .sort((a, b) => a.nome.localeCompare(b.nome))
     );
-  }, []);
+  }, [user, itens]);
 
   // ===== UPDATE LOCAL (nome + parent) =====
   const updateLocal = useCallback(async (id, newNome, parentLocalId) => {

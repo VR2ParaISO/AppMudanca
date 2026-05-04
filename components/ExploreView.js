@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { IconBack, IconDelete, IconEdit, IconMic } from './Icons';
+import { useState, useRef } from 'react';
+import { IconBack, IconDelete, IconEdit, IconMic, IconCamera } from './Icons';
+import { compressImage } from '../utils/image';
 
 export default function ExploreView({ 
   comodos, locais, itens, 
@@ -19,6 +20,14 @@ export default function ExploreView({
   const [editEspecInput, setEditEspecInput] = useState('');
   const [editParentIdInput, setEditParentIdInput] = useState('');
   const [isListeningFor, setIsListeningFor] = useState(null); // 'add' ou 'edit'
+  
+  // Foto states
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoBlob, setFotoBlob] = useState(null);
+  
+  // Ref para inputs de arquivo
+  const fileInputRefAdd = useRef(null);
+  const fileInputRefEdit = useRef(null);
 
   const startSpecificListening = (target) => {
     if (typeof window === 'undefined') return;
@@ -48,6 +57,25 @@ export default function ExploreView({
     try { rec.start(); } catch (e) {}
   };
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        const blob = await compressImage(file, 400, 0.7);
+        setFotoBlob(blob);
+        setFotoPreview(URL.createObjectURL(blob));
+      } catch (err) {
+        console.error('Erro ao processar imagem', err);
+        alert('Erro ao processar imagem');
+      }
+    }
+  };
+
+  const resetFoto = () => {
+    setFotoPreview(null);
+    setFotoBlob(null);
+  };
+
   const handleBack = () => {
     if (level === 2) {
       setLevel(1);
@@ -72,31 +100,31 @@ export default function ExploreView({
       addComodo(val);
       setInputValue('');
     } else if (level === 2 && currentComodo) {
-      addLocal(currentComodo.id, val); // parent is null
+      addLocal(currentComodo.id, val);
       setInputValue('');
     } else if (level === 3 && currentLocal) {
-      // By default adding in level 3 creates an Item. 
-      // User requested to be able to move locals, not necessarily create locals here.
-      // We will stick to the pendingItem flow for items.
       setPendingItem({ nome: val });
       setEspecInput('');
       setInputValue('');
+      resetFoto();
     }
   };
 
   const handleSaveItem = () => {
     if (pendingItem && currentLocal) {
-      addItem(currentLocal.id, pendingItem.nome, especInput.trim());
+      addItem(currentLocal.id, pendingItem.nome, especInput.trim(), fotoBlob);
       setPendingItem(null);
       setEspecInput('');
+      resetFoto();
     }
   };
 
   const handleSkipEspec = () => {
     if (pendingItem && currentLocal) {
-      addItem(currentLocal.id, pendingItem.nome, '');
+      addItem(currentLocal.id, pendingItem.nome, '', fotoBlob);
       setPendingItem(null);
       setEspecInput('');
+      resetFoto();
     }
   };
 
@@ -104,7 +132,6 @@ export default function ExploreView({
     if (confirmDelete) {
       deleteItem(confirmDelete.type, confirmDelete.id);
       setConfirmDelete(null);
-      // Safety to go back if we delete current local
       if (confirmDelete.type === 'locais' && currentLocal?.id === confirmDelete.id) {
         handleBack();
       }
@@ -116,6 +143,10 @@ export default function ExploreView({
     setEditNomeInput(item.nome);
     setEditEspecInput(item.especificacao || '');
     setEditParentIdInput(item.parent_local_id || '');
+    if (type === 'itens') {
+      setFotoPreview(item.foto_url || null);
+      setFotoBlob(null);
+    }
   };
 
   const handleSaveEdit = () => {
@@ -123,17 +154,17 @@ export default function ExploreView({
     if (!editNomeInput.trim()) return;
 
     if (editingItem.type === 'itens') {
-      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim());
+      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob);
     } else if (editingItem.type === 'locais') {
       updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null);
     } else {
       rename(editingItem.type, editingItem.id, editNomeInput.trim());
     }
     setEditingItem(null);
+    resetFoto();
   };
 
   const getLocaisCount = (comodoId) => locais.filter(l => l.comodo_id === comodoId && !l.parent_local_id).length;
-  // Get items and sublocais count
   const getItensCount = (localId) => {
     const directItens = itens.filter(i => i.local_id === localId).length;
     const directSubLocais = locais.filter(l => l.parent_local_id === localId).length;
@@ -164,7 +195,6 @@ export default function ExploreView({
 
   const localChain = currentLocal ? buildLocalChain() : [];
 
-  // Data for lists
   const currentComodos = comodos;
   const currentLocaisTop = locais.filter(l => l.comodo_id === currentComodo?.id && !l.parent_local_id);
   const currentLocaisSub = locais.filter(l => l.parent_local_id === currentLocal?.id);
@@ -174,10 +204,8 @@ export default function ExploreView({
                   level === 2 ? currentLocaisTop.length === 0 :
                   (currentLocaisSub.length + currentItens.length) === 0;
 
-  // Edit Local dropdown options
   const getValidParents = (localId) => {
     if (!currentComodo) return [];
-    // Can't move into itself
     return locais.filter(l => l.comodo_id === currentComodo.id && l.id !== localId);
   };
 
@@ -244,7 +272,7 @@ export default function ExploreView({
           </div>
         )}
 
-        {/* Level 1: Comodos */}
+        {/* Level 1 */}
         {level === 1 && currentComodos.map(c => (
           <div key={c.id} className="card flex-between" onClick={() => { setCurrentComodo(c); setLevel(2); }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -258,7 +286,7 @@ export default function ExploreView({
           </div>
         ))}
 
-        {/* Level 2: Top Locais */}
+        {/* Level 2 */}
         {level === 2 && currentLocaisTop.map(l => (
           <div key={l.id} className="card flex-between" onClick={() => { setCurrentLocal(l); setLevel(3); }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -273,7 +301,7 @@ export default function ExploreView({
           </div>
         ))}
 
-        {/* Level 3: Sub Locais AND Itens */}
+        {/* Level 3 */}
         {level === 3 && (
           <>
             {currentLocaisSub.map(l => (
@@ -292,6 +320,11 @@ export default function ExploreView({
             
             {currentItens.map(i => (
               <div key={i.id} className="card card-static flex-between">
+                {i.foto_url && (
+                  <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden' }}>
+                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={() => window.open(i.foto_url, '_blank')} />
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block' }}>{i.nome}</span>
                   {i.especificacao && (
@@ -315,7 +348,14 @@ export default function ExploreView({
         <div className="confirm-overlay" onClick={handleSkipEspec}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
             <h3 style={{ marginBottom: '4px' }}>"{pendingItem.nome}"</h3>
-            <p style={{ marginBottom: '16px' }}>Onde exatamente está este item?</p>
+            <p style={{ marginBottom: '16px' }}>Onde exatamente está este item e qual a foto dele?</p>
+            
+            {fotoPreview && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <img src={fotoPreview} alt="Preview" style={{ width: '120px', height: '120px', objectFit: 'cover', border: '3px solid var(--black)', borderRadius: '4px' }} />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <input 
                 className="input-brutal"
@@ -335,9 +375,30 @@ export default function ExploreView({
                 <IconMic />
               </button>
             </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                id="camera-input-add" 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange}
+                ref={fileInputRefAdd}
+              />
+              <button 
+                type="button" 
+                className="btn-yellow" 
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                onClick={() => fileInputRefAdd.current?.click()}
+              >
+                <IconCamera /> {fotoPreview ? "Trocar Foto" : "Tirar Foto"}
+              </button>
+            </div>
+
             <div className="confirm-actions">
-              <button className="btn-cyan" onClick={handleSkipEspec}>Pular</button>
-              <button className="btn-lime" onClick={handleSaveItem}>Salvar</button>
+              <button className="btn-cyan" onClick={handleSkipEspec}>Pular/Cancelar</button>
+              <button className="btn-lime" onClick={handleSaveItem}>Salvar Item</button>
             </div>
           </div>
         </div>
@@ -345,7 +406,7 @@ export default function ExploreView({
 
       {/* Edit Dialog */}
       {editingItem && (
-        <div className="confirm-overlay" onClick={() => setEditingItem(null)}>
+        <div className="confirm-overlay" onClick={() => { setEditingItem(null); resetFoto(); }}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
             <h3 style={{ marginBottom: '16px' }}>Editar {editingItem.type === 'itens' ? 'Item' : editingItem.type === 'locais' ? 'Local' : 'Cômodo'}</h3>
             <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Nome</label>
@@ -392,11 +453,39 @@ export default function ExploreView({
                     <IconMic />
                   </button>
                 </div>
+
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>Foto do Item</label>
+                
+                {fotoPreview && (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
+                    <img src={fotoPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', border: '2px solid var(--black)' }} />
+                  </div>
+                )}
+
+                <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment" 
+                    id="camera-input-edit" 
+                    style={{ display: 'none' }} 
+                    onChange={handleFileChange}
+                    ref={fileInputRefEdit}
+                  />
+                  <button 
+                    type="button" 
+                    className="btn-yellow" 
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    onClick={() => fileInputRefEdit.current?.click()}
+                  >
+                    <IconCamera /> {fotoPreview ? "Substituir Foto" : "Adicionar Foto"}
+                  </button>
+                </div>
               </>
             )}
             
             <div className="confirm-actions">
-              <button className="btn-cyan" onClick={() => setEditingItem(null)}>Cancelar</button>
+              <button className="btn-cyan" onClick={() => { setEditingItem(null); resetFoto(); }}>Cancelar</button>
               <button className="btn-lime" onClick={handleSaveEdit}>Salvar</button>
             </div>
           </div>
@@ -411,7 +500,7 @@ export default function ExploreView({
             <p>
               {confirmDelete.type === 'comodos' && 'Todos os locais e itens deste cômodo serão excluídos.'}
               {confirmDelete.type === 'locais' && 'Todos os sub-locais e itens deste local serão excluídos.'}
-              {confirmDelete.type === 'itens' && 'Este item será removido permanentemente.'}
+              {confirmDelete.type === 'itens' && 'Este item e sua foto (se houver) serão removidos permanentemente.'}
             </p>
             <div className="confirm-actions">
               <button className="btn-cyan" onClick={() => setConfirmDelete(null)}>Cancelar</button>

@@ -112,8 +112,15 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
               onClick={handleResultClick}
               style={{ cursor: 'pointer' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {res.searchType === 'item' && res.foto_url && (
+                    <div style={{ width: '40px', height: '40px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden' }}>
+                      <img src={res.foto_url} alt={res.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(res.foto_url, '_blank'); }} />
+                    </div>
+                  )}
+                  <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
+                </div>
                 <span className={`badge ${res.searchType === 'comodo' ? 'badge-cyan' : res.searchType === 'local' ? 'badge-yellow' : ''}`} style={{ fontSize: '0.7rem' }}>
                   {res.searchType === 'comodo' ? 'Cômodo' : res.searchType === 'local' ? 'Local' : 'Item'}
                 </span>

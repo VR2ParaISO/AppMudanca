@@ -27,6 +27,7 @@ create table if not exists itens (
   user_id uuid references auth.users(id) default auth.uid(),
   nome text not null,
   especificacao text default '',
+  foto_url text,
   created_at timestamptz default now()
 );
 
