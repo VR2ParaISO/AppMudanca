@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import AuthView from '@/components/AuthView';
 import { useDatabase } from '@/hooks/useDatabase';
 import ExploreView from '@/components/ExploreView';
 import SearchView from '@/components/SearchView';
@@ -17,7 +19,8 @@ export default function Home() {
   const [currentComodo, setCurrentComodo] = useState(null);
   const [currentLocal, setCurrentLocal] = useState(null);
 
-  const db = useDatabase();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const db = useDatabase(user);
 
   useEffect(() => {
     setMounted(true);
@@ -49,7 +52,7 @@ export default function Home() {
     return '';
   };
 
-  if (!mounted || !db.isLoaded) {
+  if (!mounted || authLoading || (user && !db.isLoaded)) {
     return (
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="card card-static" style={{ textAlign: 'center', padding: '40px' }}>
@@ -59,8 +62,16 @@ export default function Home() {
     );
   }
 
+  if (!user) {
+    return <AuthView />;
+  }
+
   return (
     <main>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, zIndex: 10 }}>
+        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-color)' }}>OrganizaMudança</h3>
+        <button onClick={signOut} style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '5px 12px', borderRadius: 'var(--radius)', cursor: 'pointer', color: 'var(--text-color)', fontSize: '0.9rem' }}>Sair</button>
+      </header>
       {activeTab === 'explore' ? (
         <ExploreView 
           comodos={db.comodos}

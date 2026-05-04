@@ -1,16 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export function useDatabase() {
+export function useDatabase(user) {
   const [comodos, setComodos] = useState([]);
   const [locais, setLocais] = useState([]);
   const [itens, setItens] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load all data on mount
+  // Load all data when user changes
   useEffect(() => {
-    loadAll();
-  }, []);
+    if (user) {
+      loadAll();
+    } else {
+      setComodos([]);
+      setLocais([]);
+      setItens([]);
+      setIsLoaded(false);
+    }
+  }, [user]);
 
   const loadAll = async () => {
     try {
