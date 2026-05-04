@@ -71,7 +71,7 @@ export default function AuthView() {
           {error && <p style={{ color: 'var(--danger-color)', fontSize: '14px', margin: 0 }}>{error}</p>}
           {successMsg && <p style={{ color: 'var(--success-color)', fontSize: '14px', margin: 0 }}>{successMsg}</p>}
           
-          <button type="submit" disabled={loading} style={{ padding: '12px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: 'var(--radius)', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
+          <button type="submit" disabled={loading} style={{ padding: '12px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 'var(--radius)', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
             {loading ? 'Aguarde...' : (isLogin ? 'Entrar' : 'Cadastrar')}
           </button>
         </form>
@@ -80,7 +80,7 @@ export default function AuthView() {
           <button 
             type="button" 
             onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', textDecoration: 'underline' }}
           >
             {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
           </button>

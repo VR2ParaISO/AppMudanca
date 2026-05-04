@@ -67,10 +67,10 @@ export default function Home() {
   }
 
   return (
-    <main>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'var(--card-bg)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, zIndex: 10 }}>
-        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary-color)' }}>OrganizaMudança</h3>
-        <button onClick={signOut} style={{ background: 'transparent', border: '1px solid var(--border-color)', padding: '5px 12px', borderRadius: 'var(--radius)', cursor: 'pointer', color: 'var(--text-color)', fontSize: '0.9rem' }}>Sair</button>
+    <main style={{ paddingTop: '80px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'var(--white)', borderBottom: 'var(--border)', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, boxShadow: 'var(--shadow-small)' }}>
+        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--blue)' }}>OrganizaMudança</h3>
+        <button onClick={signOut} className="btn-ghost" style={{ padding: '8px 12px', color: 'var(--black)', border: '2px solid var(--black)', fontSize: '0.8rem' }}>Sair</button>
       </header>
       {activeTab === 'explore' ? (
         <ExploreView 
@@ -83,6 +83,7 @@ export default function Home() {
           deleteItem={db.deleteItem}
           rename={db.rename}
           updateItem={db.updateItem}
+          updateLocal={db.updateLocal}
           level={level}
           setLevel={setLevel}
           currentComodo={currentComodo}

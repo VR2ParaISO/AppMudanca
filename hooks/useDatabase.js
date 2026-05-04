@@ -120,6 +120,19 @@ export function useDatabase(user) {
     );
   }, []);
 
+  // ===== UPDATE LOCAL (nome + parent) =====
+  const updateLocal = useCallback(async (id, newNome, parentLocalId) => {
+    const { error } = await supabase.from('locais')
+      .update({ nome: newNome.toUpperCase(), parent_local_id: parentLocalId })
+      .eq('id', id);
+    if (error) { console.error('updateLocal error:', error); return; }
+
+    setLocais(prev =>
+      prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase(), parent_local_id: parentLocalId } : item)
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+    );
+  }, []);
+
   const getStats = useCallback(() => ({
     totalComodos: comodos.length,
     totalLocais: locais.length,
@@ -136,6 +149,7 @@ export function useDatabase(user) {
     deleteItem,
     rename,
     updateItem,
+    updateLocal,
     getStats,
     isLoaded,
   };
