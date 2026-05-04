@@ -25,6 +25,8 @@ export default function ExploreView({
   // Foto states
   const [fotoPreview, setFotoPreview] = useState(null);
   const [fotoBlob, setFotoBlob] = useState(null);
+  const [zoomedFoto, setZoomedFoto] = useState(null);
+  const [removeFoto, setRemoveFoto] = useState(false);
   
   // Ref para inputs de arquivo
   const fileInputRefAdd = useRef(null);
@@ -65,6 +67,7 @@ export default function ExploreView({
         const blob = await compressImage(file, 400, 0.7);
         setFotoBlob(blob);
         setFotoPreview(URL.createObjectURL(blob));
+        setRemoveFoto(false);
       } catch (err) {
         console.error('Erro ao processar imagem', err);
         alert('Erro ao processar imagem');
@@ -75,6 +78,7 @@ export default function ExploreView({
   const resetFoto = () => {
     setFotoPreview(null);
     setFotoBlob(null);
+    setRemoveFoto(false);
   };
 
   const handleBack = () => {
@@ -149,6 +153,7 @@ export default function ExploreView({
     // Todas as entidades agora suportam foto
     setFotoPreview(item.foto_url || null);
     setFotoBlob(null);
+    setRemoveFoto(false);
   };
 
   const handleSaveEdit = () => {
@@ -156,11 +161,11 @@ export default function ExploreView({
     if (!editNomeInput.trim()) return;
 
     if (editingItem.type === 'itens') {
-      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob);
+      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob, removeFoto);
     } else if (editingItem.type === 'locais') {
-      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob);
+      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob, removeFoto);
     } else if (editingItem.type === 'comodos') {
-      updateComodo(editingItem.id, editNomeInput.trim(), fotoBlob);
+      updateComodo(editingItem.id, editNomeInput.trim(), fotoBlob, removeFoto);
     } else {
       rename(editingItem.type, editingItem.id, editNomeInput.trim());
     }
@@ -281,7 +286,7 @@ export default function ExploreView({
           <div key={c.id} className="card flex-between" onClick={() => { setCurrentComodo(c); setLevel(2); }}>
             {c.foto_url && (
               <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(c.foto_url, '_blank'); }} />
+                <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: c.foto_url, title: c.nome }); }} />
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -300,7 +305,7 @@ export default function ExploreView({
           <div key={l.id} className="card flex-between" onClick={() => { setCurrentLocal(l); setLevel(3); }}>
             {l.foto_url && (
               <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(l.foto_url, '_blank'); }} />
+                <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -322,7 +327,7 @@ export default function ExploreView({
               <div key={l.id} className="card flex-between" onClick={() => setCurrentLocal(l)} style={{ borderLeft: '10px solid var(--lime)' }}>
                 {l.foto_url && (
                   <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                    <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(l.foto_url, '_blank'); }} />
+                    <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -341,7 +346,7 @@ export default function ExploreView({
               <div key={i.id} className="card card-static flex-between">
                 {i.foto_url && (
                   <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden' }}>
-                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(i.foto_url, '_blank'); }} />
+                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: i.foto_url, title: i.nome }); }} />
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -501,7 +506,7 @@ export default function ExploreView({
               </div>
             )}
 
-            <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+            <div style={{ marginBottom: '16px', marginTop: '8px', display: 'flex', gap: '8px' }}>
               <input 
                 type="file" 
                 accept="image/*" 
@@ -514,11 +519,25 @@ export default function ExploreView({
               <button 
                 type="button" 
                 className="btn-yellow" 
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 onClick={() => fileInputRefEdit.current?.click()}
               >
                 <IconCamera /> {fotoPreview ? "Substituir Foto" : "Adicionar Foto"}
               </button>
+              {fotoPreview && (
+                <button 
+                  type="button" 
+                  className="btn-red" 
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 16px' }}
+                  onClick={() => {
+                    setFotoPreview(null);
+                    setFotoBlob(null);
+                    setRemoveFoto(true);
+                  }}
+                >
+                  <IconDelete /> Apagar Foto
+                </button>
+              )}
             </div>
             
             <div className="confirm-actions">
@@ -543,6 +562,17 @@ export default function ExploreView({
               <button className="btn-cyan" onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn-red" onClick={handleDeleteConfirm}>Excluir</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Zoom Modal */}
+      {zoomedFoto && (
+        <div className="confirm-overlay" onClick={() => setZoomedFoto(null)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '16px' }}>
+            <img src={zoomedFoto.url} alt={zoomedFoto.title} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '4px', marginBottom: '16px', border: '3px solid var(--black)' }} />
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', wordBreak: 'break-word' }}>{zoomedFoto.title}</h3>
+            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>OK, Fechar</button>
           </div>
         </div>
       )}

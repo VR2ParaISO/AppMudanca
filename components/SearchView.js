@@ -6,6 +6,7 @@ import { IconMic } from './Icons';
 export default function SearchView({ itens, locais, comodos, onNavigate }) {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [zoomedFoto, setZoomedFoto] = useState(null);
 
   const startListening = () => {
     if (typeof window === 'undefined') return;
@@ -116,7 +117,7 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {res.foto_url && (
                     <div style={{ width: '40px', height: '40px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden', borderRadius: res.searchType === 'item' ? '0' : 'var(--radius)' }}>
-                      <img src={res.foto_url} alt={res.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); window.open(res.foto_url, '_blank'); }} />
+                      <img src={res.foto_url} alt={res.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: res.foto_url, title: res.title }); }} />
                     </div>
                   )}
                   <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
@@ -144,6 +145,17 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
           </div>
         )}
       </div>
+
+      {/* Zoom Modal */}
+      {zoomedFoto && (
+        <div className="confirm-overlay" onClick={() => setZoomedFoto(null)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '16px' }}>
+            <img src={zoomedFoto.url} alt={zoomedFoto.title} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '4px', marginBottom: '16px', border: '3px solid var(--black)' }} />
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', wordBreak: 'break-word' }}>{zoomedFoto.title}</h3>
+            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>OK, Fechar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

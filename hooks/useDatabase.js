@@ -48,10 +48,18 @@ export function useDatabase(user) {
     return data;
   }, []);
 
-  const updateComodo = useCallback(async (id, newNome, newFotoBlob = null) => {
+  const updateComodo = useCallback(async (id, newNome, newFotoBlob = null, removeFoto = false) => {
     let updatePayload = { nome: newNome.toUpperCase() };
     
-    if (newFotoBlob && user) {
+    const oldComodo = comodos.find(c => c.id === id);
+
+    if (removeFoto && !newFotoBlob) {
+      updatePayload.foto_url = null;
+      if (oldComodo && oldComodo.foto_url) {
+        const path = oldComodo.foto_url.split('/public/fotos/')[1];
+        if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+      }
+    } else if (newFotoBlob && user) {
       const fileName = `${user.id}/comodos/${crypto.randomUUID()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('fotos')
@@ -61,8 +69,7 @@ export function useDatabase(user) {
         const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
         updatePayload.foto_url = publicUrlData.publicUrl;
 
-        // Tentar apagar a foto antiga
-        const oldComodo = comodos.find(c => c.id === id);
+        // Tentar apagar a foto antiga se houver substituicao
         if (oldComodo && oldComodo.foto_url) {
           const path = oldComodo.foto_url.split('/public/fotos/')[1];
           if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
@@ -96,10 +103,18 @@ export function useDatabase(user) {
     return data;
   }, []);
 
-  const updateLocal = useCallback(async (id, newNome, parentLocalId, newComodoId, newFotoBlob = null) => {
+  const updateLocal = useCallback(async (id, newNome, parentLocalId, newComodoId, newFotoBlob = null, removeFoto = false) => {
     let updatePayload = { nome: newNome.toUpperCase(), parent_local_id: parentLocalId, comodo_id: newComodoId };
 
-    if (newFotoBlob && user) {
+    const oldLocal = locais.find(l => l.id === id);
+
+    if (removeFoto && !newFotoBlob) {
+      updatePayload.foto_url = null;
+      if (oldLocal && oldLocal.foto_url) {
+        const path = oldLocal.foto_url.split('/public/fotos/')[1];
+        if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+      }
+    } else if (newFotoBlob && user) {
       const fileName = `${user.id}/locais/${crypto.randomUUID()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('fotos')
@@ -109,8 +124,7 @@ export function useDatabase(user) {
         const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
         updatePayload.foto_url = publicUrlData.publicUrl;
 
-        // Tentar apagar a foto antiga
-        const oldLocal = locais.find(l => l.id === id);
+        // Tentar apagar a foto antiga se substituida
         if (oldLocal && oldLocal.foto_url) {
           const path = oldLocal.foto_url.split('/public/fotos/')[1];
           if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
@@ -174,10 +188,18 @@ export function useDatabase(user) {
     return data;
   }, [user]);
 
-  const updateItem = useCallback(async (id, newNome, newEspecificacao, newFotoBlob = null) => {
+  const updateItem = useCallback(async (id, newNome, newEspecificacao, newFotoBlob = null, removeFoto = false) => {
     let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao };
     
-    if (newFotoBlob && user) {
+    const oldItem = itens.find(i => i.id === id);
+
+    if (removeFoto && !newFotoBlob) {
+      updatePayload.foto_url = null;
+      if (oldItem && oldItem.foto_url) {
+        const path = oldItem.foto_url.split('/public/fotos/')[1];
+        if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+      }
+    } else if (newFotoBlob && user) {
       const fileName = `${user.id}/${crypto.randomUUID()}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('fotos')
@@ -187,7 +209,6 @@ export function useDatabase(user) {
         const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
         updatePayload.foto_url = publicUrlData.publicUrl;
 
-        const oldItem = itens.find(i => i.id === id);
         if (oldItem && oldItem.foto_url) {
           const path = oldItem.foto_url.split('/public/fotos/')[1];
           if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
