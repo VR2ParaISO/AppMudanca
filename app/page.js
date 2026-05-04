@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import AuthView from '@/components/AuthView';
 import { useDatabase } from '@/hooks/useDatabase';
+import { supabase } from '@/lib/supabase';
 import ExploreView from '@/components/ExploreView';
 import SearchView from '@/components/SearchView';
 import VoiceInputOverlay from '@/components/VoiceInputOverlay';
@@ -12,6 +13,8 @@ import { IconSearch, IconHierarchy, IconMic, IconPlus } from '@/components/Icons
 export default function Home() {
   const [activeTab, setActiveTab] = useState('explore');
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [appTitleInput, setAppTitleInput] = useState('');
   const [mounted, setMounted] = useState(false);
   
   // Navigation State for Explore View
@@ -52,6 +55,20 @@ export default function Home() {
     return '';
   };
 
+  const handleSaveTitle = async () => {
+    if (!appTitleInput.trim()) return;
+    const { error } = await supabase.auth.updateUser({
+      data: { app_title: appTitleInput.trim() }
+    });
+    if (!error) {
+      setIsUserMenuOpen(false);
+      // O hook useAuth atualizará o user automaticamente na maioria das vezes, mas forçamos reload se preciso
+      window.location.reload(); 
+    } else {
+      alert("Erro ao salvar o nome.");
+    }
+  };
+
   if (!mounted || authLoading || (user && !db.isLoaded)) {
     return (
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -66,11 +83,22 @@ export default function Home() {
     return <AuthView />;
   }
 
+  const appTitle = user?.user_metadata?.app_title || 'OrganizaMudança';
+  const initial = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
+
   return (
     <main style={{ paddingTop: '80px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'var(--white)', borderBottom: 'var(--border)', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, boxShadow: 'var(--shadow-small)' }}>
-        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--blue)' }}>OrganizaMudança</h3>
-        <button onClick={signOut} className="btn-ghost" style={{ padding: '8px 12px', color: 'var(--black)', border: '2px solid var(--black)', fontSize: '0.8rem' }}>Sair</button>
+        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--blue)' }}>{appTitle}</h3>
+        <div 
+          onClick={() => {
+            setAppTitleInput(appTitle);
+            setIsUserMenuOpen(true);
+          }} 
+          style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--black)', color: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer', border: '2px solid var(--black)' }}
+        >
+          {initial}
+        </div>
       </header>
       {activeTab === 'explore' ? (
         <ExploreView 
@@ -138,6 +166,34 @@ export default function Home() {
         contextLabel={getVoiceContextLabel()}
         showEspecificacao={level === 3}
       />
+
+      {isUserMenuOpen && (
+        <div className="confirm-overlay" onClick={() => setIsUserMenuOpen(false)}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
+            <h3 style={{ marginBottom: '4px' }}>Menu do Usuário</h3>
+            <p style={{ color: 'var(--gray)', fontSize: '0.85rem', marginBottom: '20px' }}>Logado como: {user.email}</p>
+            
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Nome do Aplicativo</label>
+            <input 
+              className="input-brutal"
+              value={appTitleInput}
+              onChange={(e) => setAppTitleInput(e.target.value)}
+              placeholder="Ex: Minha Mudança"
+              style={{ marginBottom: '16px', marginTop: '4px' }}
+            />
+            
+            <button className="btn-lime" onClick={handleSaveTitle} style={{ width: '100%', marginBottom: '24px' }}>
+              Salvar Nome
+            </button>
+
+            <hr style={{ border: 'none', borderTop: '2px solid var(--black)', margin: '0 -20px 20px -20px' }} />
+
+            <button onClick={signOut} className="btn-red" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              Sair da Conta
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
