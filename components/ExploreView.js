@@ -15,10 +15,11 @@ export default function ExploreView({
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [pendingItem, setPendingItem] = useState(null); // { nome }
   const [especInput, setEspecInput] = useState('');
-  const [editingItem, setEditingItem] = useState(null); // { type, id, nome, especificacao, parent_local_id }
+  const [editingItem, setEditingItem] = useState(null); // { type, id, nome, especificacao, parent_local_id, comodo_id }
   const [editNomeInput, setEditNomeInput] = useState('');
   const [editEspecInput, setEditEspecInput] = useState('');
   const [editParentIdInput, setEditParentIdInput] = useState('');
+  const [editComodoIdInput, setEditComodoIdInput] = useState('');
   const [isListeningFor, setIsListeningFor] = useState(null); // 'add' ou 'edit'
   
   // Foto states
@@ -139,10 +140,11 @@ export default function ExploreView({
   };
 
   const handleEditClick = (type, item) => {
-    setEditingItem({ type, id: item.id });
+    setEditingItem({ type, id: item.id, comodo_id: item.comodo_id });
     setEditNomeInput(item.nome);
     setEditEspecInput(item.especificacao || '');
     setEditParentIdInput(item.parent_local_id || '');
+    setEditComodoIdInput(item.comodo_id || '');
     
     // Todas as entidades agora suportam foto
     setFotoPreview(item.foto_url || null);
@@ -156,7 +158,7 @@ export default function ExploreView({
     if (editingItem.type === 'itens') {
       updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob);
     } else if (editingItem.type === 'locais') {
-      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, fotoBlob);
+      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob);
     } else if (editingItem.type === 'comodos') {
       updateComodo(editingItem.id, editNomeInput.trim(), fotoBlob);
     } else {
@@ -207,8 +209,8 @@ export default function ExploreView({
                   (currentLocaisSub.length + currentItens.length) === 0;
 
   const getValidParents = (localId) => {
-    if (!currentComodo) return [];
-    return locais.filter(l => l.comodo_id === currentComodo.id && l.id !== localId);
+    if (!editComodoIdInput) return [];
+    return locais.filter(l => l.comodo_id === editComodoIdInput && l.id !== localId);
   };
 
   return (
@@ -436,6 +438,23 @@ export default function ExploreView({
 
             {editingItem.type === 'locais' && (
               <>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Cômodo Atual:</label>
+                <select 
+                  className="input-brutal"
+                  value={editComodoIdInput}
+                  onChange={(e) => {
+                    setEditComodoIdInput(e.target.value);
+                    if (e.target.value !== editingItem.comodo_id) {
+                      setEditParentIdInput(''); // reseta o parent se mudar de comodo
+                    }
+                  }}
+                  style={{ marginBottom: '16px', marginTop: '4px', display: 'block', backgroundColor: 'var(--white)', cursor: 'pointer' }}
+                >
+                  {comodos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Mover para dentro de:</label>
                 <select 
                   className="input-brutal"

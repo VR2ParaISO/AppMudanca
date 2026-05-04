@@ -96,8 +96,8 @@ export function useDatabase(user) {
     return data;
   }, []);
 
-  const updateLocal = useCallback(async (id, newNome, parentLocalId, newFotoBlob = null) => {
-    let updatePayload = { nome: newNome.toUpperCase(), parent_local_id: parentLocalId };
+  const updateLocal = useCallback(async (id, newNome, parentLocalId, newComodoId, newFotoBlob = null) => {
+    let updatePayload = { nome: newNome.toUpperCase(), parent_local_id: parentLocalId, comodo_id: newComodoId };
 
     if (newFotoBlob && user) {
       const fileName = `${user.id}/locais/${crypto.randomUUID()}.jpg`;
@@ -123,9 +123,26 @@ export function useDatabase(user) {
       .eq('id', id);
     if (error) { console.error('updateLocal error:', error); return; }
 
+    // Atualiza comodo_id em todos os sub-locais dependentes
+    const descendants = [];
+    const findDescendants = (parentId) => {
+      locais.filter(l => l.parent_local_id === parentId).forEach(child => {
+        descendants.push(child.id);
+        findDescendants(child.id);
+      });
+    };
+    findDescendants(id);
+
+    if (descendants.length > 0) {
+      await supabase.from('locais').update({ comodo_id: newComodoId }).in('id', descendants);
+    }
+
     setLocais(prev =>
-      prev.map(l => l.id === id ? { ...l, ...updatePayload } : l)
-        .sort((a, b) => a.nome.localeCompare(b.nome))
+      prev.map(l => {
+        if (l.id === id) return { ...l, ...updatePayload };
+        if (descendants.includes(l.id)) return { ...l, comodo_id: newComodoId };
+        return l;
+      }).sort((a, b) => a.nome.localeCompare(b.nome))
     );
   }, [user, locais]);
 
