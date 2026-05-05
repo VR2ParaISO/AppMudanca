@@ -344,7 +344,9 @@ export default function ExploreView({
         {level === 3 && currentLocal && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
             <button className="btn-ghost" onClick={handleBack} style={{ marginRight: '10px', padding: '5px 10px' }}>←</button>
-            <h2 className="title-brutal" style={{ margin: 0, flex: 1, wordBreak: 'break-word', lineHeight: 1.2 }}>{currentLocal.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisSub.length} locais | {currentItens.length} itens)</span></h2>
+            <h2 className="title-brutal" style={{ margin: 0, flex: 1, wordBreak: 'break-word', lineHeight: 1.2 }}>
+              {currentLocal.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisSub.length > 0 ? `${currentLocaisSub.length} locais | ` : ''}{currentItens.length} itens)</span>
+            </h2>
           </div>
         )}
         
