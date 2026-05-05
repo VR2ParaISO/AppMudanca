@@ -281,91 +281,124 @@ export default function ExploreView({
           </div>
         )}
 
-        {/* Level 1: Comodos */}
-        {level === 1 && currentComodos.map(c => (
-          <div key={c.id} className="card flex-between" onClick={() => { setCurrentComodo(c); setLevel(2); }}>
-            {c.foto_url && (
-              <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: c.foto_url, title: c.nome }); }} />
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{c.nome}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="badge badge-cyan">{getLocaisCount(c.id)}</span>
-              <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('comodos', c); }}><IconEdit /></button>
-              <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'comodos', id: c.id, name: c.nome }); }}><IconDelete /></button>
-            </div>
+        {/* Nível 1: Cômodos */}
+        {level === 1 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 className="title-brutal" style={{ margin: 0 }}>Cômodos <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentComodos.length})</span></h2>
           </div>
-        ))}
-
-        {/* Level 2: Top Locais */}
-        {level === 2 && currentLocaisTop.map(l => (
-          <div key={l.id} className="card flex-between" onClick={() => { setCurrentLocal(l); setLevel(3); }}>
-            {l.foto_url && (
-              <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
-                <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
+        )}
+        <div className="list-container">
+          {level === 1 && currentComodos.map(c => (
+            <div key={c.id} className="card" onClick={() => { setCurrentComodo(c); setLevel(2); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                {c.foto_url && (
+                  <div style={{ width: '48px', height: '48px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                    <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: c.foto_url, title: c.nome }); }} />
+                  </div>
+                )}
+                <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>{c.nome}</h3>
               </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {!l.foto_url && <span style={{ fontSize: '1.15rem' }}>📦</span>}
-              <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{l.nome}</span>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
+                <span className="badge badge-cyan" style={{ fontSize: '0.8rem' }}>{getLocaisCount(c.id)} locais</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('comodos', c); }}><IconEdit /></button>
+                  <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'comodos', id: c.id, name: c.nome }); }}><IconDelete /></button>
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="badge badge-yellow">{getItensCount(l.id)}</span>
-              <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('locais', l); }}><IconEdit /></button>
-              <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'locais', id: l.id, name: l.nome }); }}><IconDelete /></button>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
-        {/* Level 3: Sub Locais AND Itens */}
-        {level === 3 && (
-          <>
-            {currentLocaisSub.map(l => (
-              <div key={l.id} className="card flex-between" onClick={() => setCurrentLocal(l)} style={{ borderLeft: '10px solid var(--lime)' }}>
+        {/* Nível 2: Locais do Cômodo */}
+        {level === 2 && currentComodo && (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+            <button className="btn-ghost" onClick={handleBack} style={{ marginRight: '10px', padding: '5px 10px' }}>←</button>
+            <h2 className="title-brutal" style={{ margin: 0, flex: 1, wordBreak: 'break-word', lineHeight: 1.2 }}>{currentComodo.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisTop.length})</span></h2>
+          </div>
+        )}
+        <div className="list-container">
+          {level === 2 && currentLocaisTop.map(l => (
+            <div key={l.id} className="card" onClick={() => { setCurrentLocal(l); setLevel(3); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 {l.foto_url && (
-                  <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                  <div style={{ width: '48px', height: '48px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
                     <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
                   </div>
                 )}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {!l.foto_url && <span style={{ fontSize: '1.15rem' }}>📦</span>}
-                  <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block', wordBreak: 'break-word' }}>{l.nome}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="badge badge-yellow">{getItensCount(l.id)}</span>
+                <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>{!l.foto_url && <span style={{ marginRight: '8px' }}>📦</span>}{l.nome}</h3>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
+                <span className="badge badge-yellow" style={{ fontSize: '0.8rem' }}>{getItensCount(l.id)} itens</span>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('locais', l); }}><IconEdit /></button>
                   <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'locais', id: l.id, name: l.nome }); }}><IconDelete /></button>
                 </div>
               </div>
-            ))}
-            
-            {currentItens.map(i => (
-              <div key={i.id} className="card card-static flex-between">
-                {i.foto_url && (
-                  <div style={{ width: '48px', height: '48px', flexShrink: 0, marginRight: '12px', border: '2px solid var(--black)', overflow: 'hidden' }}>
-                    <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: i.foto_url, title: i.nome }); }} />
-                  </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: '1.15rem', fontWeight: 600, display: 'block' }}>{i.nome}</span>
-                  {i.especificacao && (
-                    <div className="spec-tag">
-                      <small>📍</small>{i.especificacao}
-                    </div>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('itens', i); }}><IconEdit /></button>
-                  <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'itens', id: i.id, name: i.nome }); }}><IconDelete /></button>
-                </div>
-              </div>
-            ))}
-          </>
+            </div>
+          ))}
+        </div>
+
+        {/* Nível 3: Sub-locais e Itens */}
+        {level === 3 && currentLocal && (
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+            <button className="btn-ghost" onClick={handleBack} style={{ marginRight: '10px', padding: '5px 10px' }}>←</button>
+            <h2 className="title-brutal" style={{ margin: 0, flex: 1, wordBreak: 'break-word', lineHeight: 1.2 }}>{currentLocal.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisSub.length} locais | {currentItens.length} itens)</span></h2>
+          </div>
         )}
-      </div>
+        
+        <div className="list-container">
+          {level === 3 && (
+            <>
+              {/* Lista de Sub-locais primeiro */}
+              {currentLocaisSub.map(l => (
+                <div key={l.id} className="card" onClick={() => setCurrentLocal(l)} style={{ borderLeft: '10px solid var(--lime)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    {l.foto_url && (
+                      <div style={{ width: '48px', height: '48px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden', borderRadius: 'var(--radius)' }}>
+                        <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
+                      </div>
+                    )}
+                    <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>
+                      <span style={{ fontSize: '1.2rem', marginRight: '6px' }}>📦</span>{l.nome}
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
+                    <span className="badge badge-yellow" style={{ fontSize: '0.8rem' }}>{getItensCount(l.id)} itens</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('locais', l); }}><IconEdit /></button>
+                      <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'locais', id: l.id, name: l.nome }); }}><IconDelete /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Lista de Itens */}
+              {currentItens.map(i => (
+                <div key={i.id} className="card card-static" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    {i.foto_url && (
+                      <div style={{ width: '48px', height: '48px', flexShrink: 0, border: '2px solid var(--black)', overflow: 'hidden' }}>
+                        <img src={i.foto_url} alt={i.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: i.foto_url, title: i.nome }); }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0, alignSelf: 'center' }}>
+                      <h3 style={{ whiteSpace: 'normal', wordBreak: 'break-word', margin: 0, fontSize: '1.2rem' }}>{i.nome}</h3>
+                      {i.especificacao && <p style={{ fontSize: '0.85rem', color: 'var(--gray)', margin: '4px 0 0 0', wordBreak: 'break-word' }}>{i.especificacao}</p>}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px', gap: '8px' }}>
+                    <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('itens', i); }}><IconEdit /></button>
+                    <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'itens', id: i.id, name: i.nome }); }}><IconDelete /></button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
 
       {/* Especificação Dialog (Pending Item) */}
       {pendingItem && (
