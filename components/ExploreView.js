@@ -399,6 +399,7 @@ export default function ExploreView({
             </>
           )}
         </div>
+      </div>
 
       {/* Especificação Dialog (Pending Item) */}
       {pendingItem && (
