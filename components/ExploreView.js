@@ -100,38 +100,32 @@ export default function ExploreView({
     if (!inputValue.trim()) return;
 
     const val = inputValue.trim();
+    setPendingItem({ nome: val });
+    setEspecInput('');
+    setInputValue('');
+    resetFoto();
+  };
 
+  const _handleSaveOrSkip = async (skipEspec = false) => {
+    if (!pendingItem) return;
+    
+    // Para simplificar, fotoBlob na criação rápida só é processado para Itens por enquanto (já que addComodo/addLocal não recebem).
+    // As fotos para Cômodos e Locais podem ser adicionadas na edição.
     if (level === 1) {
-      addComodo(val);
-      setInputValue('');
+      addComodo(pendingItem.nome, skipEspec ? '' : especInput.trim());
     } else if (level === 2 && currentComodo) {
-      addLocal(currentComodo.id, val);
-      setInputValue('');
+      addLocal(currentComodo.id, pendingItem.nome, skipEspec ? '' : especInput.trim());
     } else if (level === 3 && currentLocal) {
-      setPendingItem({ nome: val });
-      setEspecInput('');
-      setInputValue('');
-      resetFoto();
+      addItem(currentLocal.id, pendingItem.nome, skipEspec ? '' : especInput.trim(), fotoBlob);
     }
+    
+    setPendingItem(null);
+    setEspecInput('');
+    resetFoto();
   };
 
-  const handleSaveItem = () => {
-    if (pendingItem && currentLocal) {
-      addItem(currentLocal.id, pendingItem.nome, especInput.trim(), fotoBlob);
-      setPendingItem(null);
-      setEspecInput('');
-      resetFoto();
-    }
-  };
-
-  const handleSkipEspec = () => {
-    if (pendingItem && currentLocal) {
-      addItem(currentLocal.id, pendingItem.nome, '', fotoBlob);
-      setPendingItem(null);
-      setEspecInput('');
-      resetFoto();
-    }
-  };
+  const handleSaveItem = () => _handleSaveOrSkip(false);
+  const handleSkipEspec = () => _handleSaveOrSkip(true);
 
   const handleDeleteConfirm = () => {
     if (confirmDelete) {
@@ -163,9 +157,9 @@ export default function ExploreView({
     if (editingItem.type === 'itens') {
       updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob, removeFoto);
     } else if (editingItem.type === 'locais') {
-      updateLocal(editingItem.id, editNomeInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob, removeFoto);
+      updateLocal(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob, removeFoto);
     } else if (editingItem.type === 'comodos') {
-      updateComodo(editingItem.id, editNomeInput.trim(), fotoBlob, removeFoto);
+      updateComodo(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob, removeFoto);
     } else {
       rename(editingItem.type, editingItem.id, editNomeInput.trim());
     }
@@ -296,7 +290,10 @@ export default function ExploreView({
                     <img src={c.foto_url} alt={c.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: c.foto_url, title: c.nome }); }} />
                   </div>
                 )}
-                <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>{c.nome}</h3>
+                <div style={{ flex: 1, minWidth: 0, alignSelf: 'center' }}>
+                  <h3 style={{ margin: 0, wordBreak: 'break-word', fontSize: '1.2rem' }}>{c.nome}</h3>
+                  {c.especificacao && <p style={{ fontSize: '0.85rem', color: 'var(--gray)', margin: '4px 0 0 0', wordBreak: 'break-word' }}>{c.especificacao}</p>}
+                </div>
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
@@ -326,7 +323,10 @@ export default function ExploreView({
                     <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
                   </div>
                 )}
-                <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>{!l.foto_url && <span style={{ marginRight: '8px' }}>📦</span>}{l.nome}</h3>
+                <div style={{ flex: 1, minWidth: 0, alignSelf: 'center' }}>
+                  <h3 style={{ margin: 0, wordBreak: 'break-word', fontSize: '1.2rem' }}>{!l.foto_url && <span style={{ marginRight: '8px' }}>📦</span>}{l.nome}</h3>
+                  {l.especificacao && <p style={{ fontSize: '0.85rem', color: 'var(--gray)', margin: '4px 0 0 0', wordBreak: 'break-word' }}>{l.especificacao}</p>}
+                </div>
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
@@ -362,9 +362,12 @@ export default function ExploreView({
                         <img src={l.foto_url} alt={l.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onClick={(e) => { e.stopPropagation(); setZoomedFoto({ url: l.foto_url, title: l.nome }); }} />
                       </div>
                     )}
-                    <h3 style={{ margin: 0, flex: 1, wordBreak: 'break-word', fontSize: '1.2rem', alignSelf: 'center' }}>
-                      <span style={{ fontSize: '1.2rem', marginRight: '6px' }}>📦</span>{l.nome}
-                    </h3>
+                    <div style={{ flex: 1, minWidth: 0, alignSelf: 'center' }}>
+                      <h3 style={{ margin: 0, wordBreak: 'break-word', fontSize: '1.2rem' }}>
+                        <span style={{ fontSize: '1.2rem', marginRight: '6px' }}>📦</span>{l.nome}
+                      </h3>
+                      {l.especificacao && <p style={{ fontSize: '0.85rem', color: 'var(--gray)', margin: '4px 0 0 0', wordBreak: 'break-word' }}>{l.especificacao}</p>}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
@@ -436,25 +439,27 @@ export default function ExploreView({
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="environment" 
-                id="camera-input-add" 
-                style={{ display: 'none' }} 
-                onChange={handleFileChange}
-                ref={fileInputRefAdd}
-              />
-              <button 
-                type="button" 
-                className="btn-yellow" 
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                onClick={() => fileInputRefAdd.current?.click()}
-              >
-                <IconCamera /> {fotoPreview ? "Trocar Foto" : "Tirar Foto"}
-              </button>
-            </div>
+            {level === 3 && (
+              <div style={{ marginBottom: '20px' }}>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  id="camera-input-add" 
+                  style={{ display: 'none' }} 
+                  onChange={handleFileChange}
+                  ref={fileInputRefAdd}
+                />
+                <button 
+                  type="button" 
+                  className="btn-yellow" 
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  onClick={() => fileInputRefAdd.current?.click()}
+                >
+                  <IconCamera /> {fotoPreview ? "Trocar Foto" : "Tirar Foto"}
+                </button>
+              </div>
+            )}
 
             <div className="confirm-actions">
               <button className="btn-cyan" onClick={handleSkipEspec}>Pular/Cancelar</button>
@@ -511,27 +516,24 @@ export default function ExploreView({
               </>
             )}
 
-            {editingItem.type === 'itens' && (
-              <>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação</label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
-                  <input 
-                    className="input-brutal"
-                    value={editEspecInput}
-                    onChange={(e) => setEditEspecInput(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <button 
-                    type="button"
-                    className="edit-btn" 
-                    style={{ backgroundColor: isListeningFor === 'edit' ? 'var(--blue)' : 'var(--cyan)' }}
-                    onClick={() => startSpecificListening('edit')}
-                  >
-                    <IconMic />
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Especificação para todos */}
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
+              <input 
+                className="input-brutal"
+                value={editEspecInput}
+                onChange={(e) => setEditEspecInput(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button 
+                type="button"
+                className="edit-btn" 
+                style={{ backgroundColor: isListeningFor === 'edit' ? 'var(--blue)' : 'var(--cyan)' }}
+                onClick={() => startSpecificListening('edit')}
+              >
+                <IconMic />
+              </button>
+            </div>
             
             {/* Secao de Foto para todas as entidades */}
             <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>Foto</label>

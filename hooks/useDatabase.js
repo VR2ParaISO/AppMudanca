@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export function useDatabase(user) {
+  const [casas, setCasas] = useState([]);
+  const [currentCasa, setCurrentCasa] = useState(null);
   const [comodos, setComodos] = useState([]);
   const [locais, setLocais] = useState([]);
   const [itens, setItens] = useState([]);
@@ -11,6 +13,8 @@ export function useDatabase(user) {
     if (user) {
       loadAll();
     } else {
+      setCasas([]);
+      setCurrentCasa(null);
       setComodos([]);
       setLocais([]);
       setItens([]);
@@ -20,12 +24,23 @@ export function useDatabase(user) {
 
   const loadAll = async () => {
     try {
-      const [cRes, lRes, iRes] = await Promise.all([
+      const [csRes, cRes, lRes, iRes] = await Promise.all([
+        supabase.from('casas').select('*').order('nome'),
         supabase.from('comodos').select('*').order('nome'),
         supabase.from('locais').select('*').order('nome'),
         supabase.from('itens').select('*').order('nome'),
       ]);
 
+      if (csRes.data) {
+        setCasas(csRes.data);
+        if (csRes.data.length > 0) {
+          // Mantém a casa selecionada atual (se ainda existir) ou pega a primeira
+          setCurrentCasa(prev => {
+            if (prev && csRes.data.find(c => c.id === prev.id)) return prev;
+            return csRes.data[0];
+          });
+        }
+      }
       if (cRes.data) setComodos(cRes.data);
       if (lRes.data) setLocais(lRes.data);
       if (iRes.data) setItens(iRes.data);
@@ -35,21 +50,92 @@ export function useDatabase(user) {
     setIsLoaded(true);
   };
 
+  // ===== CASAS =====
+  const addCasa = useCallback(async (nome, especificacao = '') => {
+    const { data, error } = await supabase
+      .from('casas')
+      .insert({ nome: nome.trim(), especificacao })
+      .select()
+      .single();
+
+    if (error) { console.error('addCasa error:', error); return; }
+    setCasas(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setCurrentCasa(data);
+    return data;
+  }, []);
+
+  const updateCasa = useCallback(async (id, newNome, newEspecificacao = '', newFotoBlob = null, removeFoto = false) => {
+    let updatePayload = { nome: newNome.trim(), especificacao: newEspecificacao };
+    const oldCasa = casas.find(c => c.id === id);
+
+    if (removeFoto && !newFotoBlob) {
+      updatePayload.foto_url = null;
+      if (oldCasa && oldCasa.foto_url) {
+        const path = oldCasa.foto_url.split('/public/fotos/')[1];
+        if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+      }
+    } else if (newFotoBlob && user) {
+      const fileName = `${user.id}/casas/${crypto.randomUUID()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('fotos')
+        .upload(fileName, newFotoBlob, { contentType: 'image/jpeg' });
+      
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('fotos').getPublicUrl(fileName);
+        updatePayload.foto_url = publicUrlData.publicUrl;
+
+        if (oldCasa && oldCasa.foto_url) {
+          const path = oldCasa.foto_url.split('/public/fotos/')[1];
+          if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing old photo", err));
+        }
+      }
+    }
+
+    const { error } = await supabase.from('casas')
+      .update(updatePayload)
+      .eq('id', id);
+    if (error) { console.error('updateCasa error:', error); return; }
+
+    setCasas(prev => prev.map(c => c.id === id ? { ...c, ...updatePayload } : c).sort((a, b) => a.nome.localeCompare(b.nome)));
+    setCurrentCasa(prev => prev?.id === id ? { ...prev, ...updatePayload } : prev);
+  }, [user, casas]);
+
+  const deleteCasa = useCallback(async (id) => {
+    const casaToDelete = casas.find(c => c.id === id);
+    if (casaToDelete && casaToDelete.foto_url) {
+      const path = casaToDelete.foto_url.split('/public/fotos/')[1];
+      if (path) supabase.storage.from('fotos').remove([path]).catch(err => console.error("Error removing photo", err));
+    }
+
+    const { error } = await supabase.from('casas').delete().eq('id', id);
+    if (error) { console.error('deleteCasa error:', error); return; }
+
+    setCasas(prev => {
+      const novasCasas = prev.filter(c => c.id !== id);
+      setCurrentCasa(novasCasas.length > 0 ? novasCasas[0] : null);
+      return novasCasas;
+    });
+    // Opcional: remover os cômodos, locais e itens do estado local, mas um reload/loadAll seria melhor ou apenas filtrar
+    setComodos(prev => prev.filter(c => c.casa_id !== id));
+  }, []);
+
   // ===== COMODOS =====
-  const addComodo = useCallback(async (nome) => {
+  const addComodo = useCallback(async (nome, especificacao = '') => {
+    if (!currentCasa) { console.error('Nenhuma casa selecionada'); return; }
+
     const { data, error } = await supabase
       .from('comodos')
-      .insert({ nome: nome.toUpperCase() })
+      .insert({ nome: nome.toUpperCase(), casa_id: currentCasa.id, especificacao })
       .select()
       .single();
 
     if (error) { console.error('addComodo error:', error); return; }
     setComodos(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
     return data;
-  }, []);
+  }, [currentCasa]);
 
-  const updateComodo = useCallback(async (id, newNome, newFotoBlob = null, removeFoto = false) => {
-    let updatePayload = { nome: newNome.toUpperCase() };
+  const updateComodo = useCallback(async (id, newNome, newEspecificacao = '', newFotoBlob = null, removeFoto = false) => {
+    let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao };
     
     const oldComodo = comodos.find(c => c.id === id);
 
@@ -89,12 +175,12 @@ export function useDatabase(user) {
   }, [user, comodos]);
 
   // ===== LOCAIS =====
-  const addLocal = useCallback(async (comodoId, nome) => {
+  const addLocal = useCallback(async (comodoId, nome, especificacao = '') => {
     if (!comodoId) { console.error('Missing comodoId'); return; }
 
     const { data, error } = await supabase
       .from('locais')
-      .insert({ comodo_id: comodoId, nome: nome.toUpperCase() })
+      .insert({ comodo_id: comodoId, nome: nome.toUpperCase(), especificacao })
       .select()
       .single();
 
@@ -103,8 +189,8 @@ export function useDatabase(user) {
     return data;
   }, []);
 
-  const updateLocal = useCallback(async (id, newNome, parentLocalId, newComodoId, newFotoBlob = null, removeFoto = false) => {
-    let updatePayload = { nome: newNome.toUpperCase(), parent_local_id: parentLocalId, comodo_id: newComodoId };
+  const updateLocal = useCallback(async (id, newNome, newEspecificacao = '', parentLocalId, newComodoId, newFotoBlob = null, removeFoto = false) => {
+    let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao, parent_local_id: parentLocalId, comodo_id: newComodoId };
 
     const oldLocal = locais.find(l => l.id === id);
 
@@ -261,23 +347,35 @@ export function useDatabase(user) {
     const { error } = await supabase.from(type).update({ nome: newNome.toUpperCase() }).eq('id', id);
     if (error) { console.error('rename error:', error); return; }
 
-    const setter = type === 'comodos' ? setComodos : type === 'locais' ? setLocais : setItens;
+    const setter = type === 'casas' ? setCasas : type === 'comodos' ? setComodos : type === 'locais' ? setLocais : setItens;
     setter(prev =>
       prev.map(item => item.id === id ? { ...item, nome: newNome.toUpperCase() } : item)
         .sort((a, b) => a.nome.localeCompare(b.nome))
     );
   }, []);
 
+  // Filtragem dos dados pela casa atual
+  const filteredComodos = comodos.filter(c => c.casa_id === currentCasa?.id);
+  const filteredLocais = locais.filter(l => filteredComodos.some(fc => fc.id === l.comodo_id));
+  const filteredItens = itens.filter(i => filteredLocais.some(fl => fl.id === i.local_id));
+
   const getStats = useCallback(() => ({
-    totalComodos: comodos.length,
-    totalLocais: locais.length,
-    totalItens: itens.length,
-  }), [comodos, locais, itens]);
+    totalCasas: casas.length,
+    totalComodos: filteredComodos.length,
+    totalLocais: filteredLocais.length,
+    totalItens: filteredItens.length,
+  }), [casas, filteredComodos, filteredLocais, filteredItens]);
 
   return {
-    comodos,
-    locais,
-    itens,
+    casas,
+    currentCasa,
+    setCurrentCasa,
+    addCasa,
+    updateCasa,
+    deleteCasa,
+    comodos: filteredComodos,
+    locais: filteredLocais,
+    itens: filteredItens,
     addComodo,
     updateComodo,
     addLocal,
