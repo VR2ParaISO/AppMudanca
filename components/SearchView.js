@@ -2,58 +2,48 @@
 
 import { useState } from 'react';
 import { IconMic } from './Icons';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-export default function SearchView({ itens, locais, comodos, onNavigate }) {
+export default function SearchView({ itens, locais, comodos, onNavigate, currentCasa }) {
   const [query, setQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [zoomedFoto, setZoomedFoto] = useState(null);
+  const { t, lang } = useLanguage();
+
+  const langToSpeech = { pt: 'pt-BR', en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', it: 'it-IT', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
 
   const startListening = () => {
     if (typeof window === 'undefined') return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Reconhecimento de voz não suportado neste navegador.");
-      return;
-    }
-
+    if (!SpeechRecognition) return;
     const rec = new SpeechRecognition();
-    rec.lang = 'pt-BR';
+    rec.lang = langToSpeech[lang] || 'en-US';
     rec.continuous = false;
     rec.interimResults = false;
-
     rec.onstart = () => setIsListening(true);
     rec.onend = () => setIsListening(false);
     rec.onerror = () => setIsListening(false);
-    rec.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      setQuery(text);
-    };
-
+    rec.onresult = (event) => setQuery(event.results[0][0].transcript);
     try { rec.start(); } catch (e) {}
   };
 
   let results = [];
   if (query.trim()) {
     const q = query.toLowerCase();
-    
     const matchedComodos = comodos.filter(c => c.nome.toLowerCase().includes(q))
-      .map(c => ({ ...c, searchType: 'comodo', title: c.nome, hierarchy: 'Cômodo' }));
-      
+      .map(c => ({ ...c, searchType: 'comodo', title: c.nome, hierarchy: t('hierarchy.level2', currentCasa) }));
     const matchedLocais = locais.filter(l => l.nome.toLowerCase().includes(q))
       .map(l => {
         const comodo = comodos.find(c => c.id === l.comodo_id);
         return { ...l, searchType: 'local', title: l.nome, hierarchy: `${comodo?.nome || '—'}`, comodoObj: comodo };
       });
-      
-    const matchedItens = itens.filter(i => 
-        i.nome.toLowerCase().includes(q) || 
-        i.especificacao?.toLowerCase().includes(q)
-      ).map(item => {
-        const local = locais.find(l => l.id === item.local_id);
-        const comodo = comodos.find(c => c.id === local?.comodo_id);
-        return { ...item, searchType: 'item', title: item.nome, hierarchy: `${comodo?.nome || '—'} › ${local?.nome || '—'}`, localObj: local, comodoObj: comodo };
-      });
-      
+    const matchedItens = itens.filter(i =>
+      i.nome.toLowerCase().includes(q) || i.especificacao?.toLowerCase().includes(q)
+    ).map(item => {
+      const local = locais.find(l => l.id === item.local_id);
+      const comodo = comodos.find(c => c.id === local?.comodo_id);
+      return { ...item, searchType: 'item', title: item.nome, hierarchy: `${comodo?.nome || '—'} › ${local?.nome || '—'}`, localObj: local, comodoObj: comodo };
+    });
     results = [...matchedComodos, ...matchedLocais, ...matchedItens];
   }
 
@@ -62,27 +52,22 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
   return (
     <div>
       <div className="page-header">
-        <h1>🔍 Buscar Tudo</h1>
+        <h1>🔍 {t('common.search')}</h1>
         <p style={{ fontSize: '0.85rem', color: 'var(--gray)', fontWeight: 500, marginTop: '4px' }}>
-          {totalElementos} {totalElementos === 1 ? 'elemento cadastrado' : 'elementos cadastrados'}
+          {totalElementos} {totalElementos === 1 ? t('hierarchy.level4', currentCasa) : t('common.search_placeholder')}
         </p>
       </div>
-      
+
       <div style={{ display: 'flex', gap: '8px' }}>
-        <input 
+        <input
           className="input-brutal"
-          placeholder="Cômodos, locais ou itens..."
+          placeholder={`${t('hierarchy.level2', currentCasa)}, ${t('hierarchy.level3', currentCasa)}, ${t('hierarchy.level4', currentCasa)}...`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           id="search-input"
           style={{ flex: 1 }}
         />
-        <button 
-          type="button"
-          className="edit-btn" 
-          style={{ backgroundColor: isListening ? 'var(--blue)' : 'var(--cyan)' }}
-          onClick={startListening}
-        >
+        <button type="button" className="edit-btn" style={{ backgroundColor: isListening ? 'var(--blue)' : 'var(--cyan)' }} onClick={startListening}>
           <IconMic />
         </button>
       </div>
@@ -91,28 +76,19 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
         {query && results.length === 0 && (
           <div className="empty-state">
             <span className="emoji">😕</span>
-            <p>Nenhum resultado para "{query}"</p>
+            <p>{query}</p>
           </div>
         )}
 
         {results.map(res => {
           const handleResultClick = () => {
-            if (res.searchType === 'comodo') {
-              onNavigate(2, res, null);
-            } else if (res.searchType === 'local') {
-              onNavigate(3, res.comodoObj, res);
-            } else if (res.searchType === 'item') {
-              onNavigate(3, res.comodoObj, res.localObj);
-            }
+            if (res.searchType === 'comodo') onNavigate(2, res, null);
+            else if (res.searchType === 'local') onNavigate(3, res.comodoObj, res);
+            else if (res.searchType === 'item') onNavigate(3, res.comodoObj, res.localObj);
           };
-
+          const badgeLabel = res.searchType === 'comodo' ? t('hierarchy.level2', currentCasa) : res.searchType === 'local' ? t('hierarchy.level3', currentCasa) : t('hierarchy.level4', currentCasa);
           return (
-            <div 
-              key={`${res.searchType}-${res.id}`} 
-              className="card card-static search-result"
-              onClick={handleResultClick}
-              style={{ cursor: 'pointer' }}
-            >
+            <div key={`${res.searchType}-${res.id}`} className="card card-static search-result" onClick={handleResultClick} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {res.foto_url && (
@@ -123,17 +99,11 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
                   <h2 style={{ fontSize: '1.3rem', margin: 0 }}>{res.title}</h2>
                 </div>
                 <span className={`badge ${res.searchType === 'comodo' ? 'badge-cyan' : res.searchType === 'local' ? 'badge-yellow' : ''}`} style={{ fontSize: '0.7rem' }}>
-                  {res.searchType === 'comodo' ? 'Cômodo' : res.searchType === 'local' ? 'Local' : 'Item'}
+                  {badgeLabel}
                 </span>
               </div>
-              {res.searchType === 'item' && res.especificacao && (
-                <div className="spec-tag">
-                  <small>📍</small>{res.especificacao}
-                </div>
-              )}
-              <div className="hierarchy">
-                {res.hierarchy}
-              </div>
+              {res.searchType === 'item' && res.especificacao && <div className="spec-tag"><small>📍</small>{res.especificacao}</div>}
+              <div className="hierarchy">{res.hierarchy}</div>
             </div>
           );
         })}
@@ -141,18 +111,17 @@ export default function SearchView({ itens, locais, comodos, onNavigate }) {
         {!query && (
           <div className="empty-state">
             <span className="emoji">📦</span>
-            <p>Digite o nome do que você procura para encontrar instantaneamente.</p>
+            <p>{t('common.search_placeholder')}</p>
           </div>
         )}
       </div>
 
-      {/* Zoom Modal */}
       {zoomedFoto && (
         <div className="confirm-overlay" onClick={() => setZoomedFoto(null)}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '16px' }}>
             <img src={zoomedFoto.url} alt={zoomedFoto.title} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '4px', marginBottom: '16px', border: '3px solid var(--black)' }} />
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', wordBreak: 'break-word' }}>{zoomedFoto.title}</h3>
-            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>OK, Fechar</button>
+            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>{t('common.ok_close')}</button>
           </div>
         </div>
       )}

@@ -1,8 +1,9 @@
 import "./globals.css";
+import { Providers } from './providers';
 
 export const metadata = {
-  title: "OrganizaMudança",
-  description: "Encontre tudo na sua mudança com voz e estilo.",
+  title: "INDEXIA",
+  description: "Catalog anything with voice and style.",
 };
 
 export const viewport = {
@@ -14,8 +15,12 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body>{children}</body>
+    <html suppressHydrationWarning>
+      <body>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   );
 }

@@ -3,14 +3,19 @@
 import { useState, useRef } from 'react';
 import { IconBack, IconDelete, IconEdit, IconMic, IconCamera } from './Icons';
 import { compressImage } from '../utils/image';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+const langToSpeech = { pt: 'pt-BR', en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', it: 'it-IT', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
 
 export default function ExploreView({ 
   comodos, locais, itens, 
   addComodo, addLocal, addItem, deleteItem, rename, updateItem, updateLocal, updateComodo,
   level, setLevel,
   currentComodo, setCurrentComodo,
-  currentLocal, setCurrentLocal
+  currentLocal, setCurrentLocal,
+  currentCasa
 }) {
+  const { t, lang } = useLanguage();
   const [inputValue, setInputValue] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [pendingItem, setPendingItem] = useState(null); // { nome }
@@ -36,12 +41,11 @@ export default function ExploreView({
     if (typeof window === 'undefined') return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Reconhecimento de voz não suportado neste navegador.");
       return;
     }
 
     const rec = new SpeechRecognition();
-    rec.lang = 'pt-BR';
+    rec.lang = langToSpeech[lang] || 'en-US';
     rec.continuous = false;
     rec.interimResults = false;
 
@@ -174,16 +178,20 @@ export default function ExploreView({
     return directItens + directSubLocais;
   };
 
+  const h2 = t('hierarchy.level2', currentCasa);
+  const h3 = t('hierarchy.level3', currentCasa);
+  const h4 = t('hierarchy.level4', currentCasa);
+
   const placeholders = {
-    1: "Nome do cômodo...",
-    2: "Nome do local (ex: Armário, Gaveta)...",
-    3: "Nome do item..."
+    1: h2 + '...',
+    2: h3 + '...',
+    3: h4 + '...'
   };
 
   const emptyMessages = {
-    1: { emoji: "🏠", text: "Nenhum cômodo cadastrado. Comece adicionando os cômodos da casa!" },
-    2: { emoji: "📦", text: "Nenhum local neste cômodo. Adicione móveis ou espaços!" },
-    3: { emoji: "🔍", text: "Nenhum item ou sub-local aqui. Cadastre seus pertences!" }
+    1: { emoji: "🏠", text: t('explore.empty_level1', null, [h2]) },
+    2: { emoji: "📦", text: t('explore.empty_level2', null, [h3, h2]) },
+    3: { emoji: "🔍", text: t('explore.empty_level3', null, [h4, h3]) }
   };
 
   const buildLocalChain = () => {
@@ -218,7 +226,7 @@ export default function ExploreView({
       <div className="page-header">
         {level > 1 && (
           <div className="breadcrumb" style={{ flexWrap: 'wrap' }}>
-            <span style={{ cursor: 'pointer' }} onClick={() => { setLevel(1); setCurrentComodo(null); setCurrentLocal(null); }}>Cômodos</span>
+            <span style={{ cursor: 'pointer' }} onClick={() => { setLevel(1); setCurrentComodo(null); setCurrentLocal(null); }}>{h2}</span>
             {level >= 2 && (
                <>
                  &gt; <span style={{ cursor: 'pointer' }} onClick={() => { setLevel(2); setCurrentLocal(null); }}>{currentComodo?.nome}</span>
@@ -245,7 +253,7 @@ export default function ExploreView({
             </button>
           )}
           <h1 style={{ flex: 1 }}>
-            {level === 1 && "🏠 Cômodos"}
+            {level === 1 && `🏠 ${h2}`}
             {level === 2 && currentComodo?.nome}
             {level === 3 && currentLocal?.nome}
           </h1>
@@ -262,7 +270,7 @@ export default function ExploreView({
           id="main-input"
         />
         <button type="submit" className="btn-lime" style={{ width: '100%', marginTop: '10px' }}>
-          + Adicionar
+          + {t('common.add')}
         </button>
       </form>
 
@@ -278,7 +286,7 @@ export default function ExploreView({
         {/* Nível 1: Cômodos */}
         {level === 1 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 className="title-brutal" style={{ margin: 0 }}>Cômodos <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentComodos.length})</span></h2>
+            <h2 className="title-brutal" style={{ margin: 0 }}>{h2} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentComodos.length})</span></h2>
           </div>
         )}
         <div className="list-container">
@@ -297,7 +305,7 @@ export default function ExploreView({
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
-                <span className="badge badge-cyan" style={{ fontSize: '0.8rem' }}>{getLocaisCount(c.id)} locais</span>
+                <span className="badge badge-cyan" style={{ fontSize: '0.8rem' }}>{getLocaisCount(c.id)} {h3}</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('comodos', c); }}><IconEdit /></button>
                   <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'comodos', id: c.id, name: c.nome }); }}><IconDelete /></button>
@@ -330,7 +338,7 @@ export default function ExploreView({
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid var(--black)', paddingTop: '12px', marginTop: '4px' }}>
-                <span className="badge badge-yellow" style={{ fontSize: '0.8rem' }}>{getItensCount(l.id)} itens</span>
+                <span className="badge badge-yellow" style={{ fontSize: '0.8rem' }}>{getItensCount(l.id)} {h4}</span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="edit-btn" onClick={(e) => { e.stopPropagation(); handleEditClick('locais', l); }}><IconEdit /></button>
                   <button className="delete-btn" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ type: 'locais', id: l.id, name: l.nome }); }}><IconDelete /></button>
@@ -345,7 +353,7 @@ export default function ExploreView({
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
             <button className="btn-ghost" onClick={handleBack} style={{ marginRight: '10px', padding: '5px 10px' }}>←</button>
             <h2 className="title-brutal" style={{ margin: 0, flex: 1, wordBreak: 'break-word', lineHeight: 1.2 }}>
-              {currentLocal.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisSub.length > 0 ? `${currentLocaisSub.length} locais | ` : ''}{currentItens.length} itens)</span>
+              {currentLocal.nome} <span style={{ fontSize: '1.2rem', color: 'var(--gray)' }}>({currentLocaisSub.length > 0 ? `${currentLocaisSub.length} ${h3} | ` : ''}{currentItens.length} {h4})</span>
             </h2>
           </div>
         )}
@@ -411,7 +419,7 @@ export default function ExploreView({
         <div className="confirm-overlay" onClick={handleSkipEspec}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
             <h3 style={{ marginBottom: '4px' }}>"{pendingItem.nome}"</h3>
-            <p style={{ marginBottom: '16px' }}>Onde exatamente está este item e qual a foto dele?</p>
+            <p style={{ marginBottom: '16px' }}>{t('explore.espec_label')}</p>
             
             {fotoPreview && (
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
@@ -456,14 +464,14 @@ export default function ExploreView({
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   onClick={() => fileInputRefAdd.current?.click()}
                 >
-                  <IconCamera /> {fotoPreview ? "Trocar Foto" : "Tirar Foto"}
+                  <IconCamera /> {fotoPreview ? t('common.replace') : t('common.add_photo')}
                 </button>
               </div>
             )}
 
             <div className="confirm-actions">
-              <button className="btn-cyan" onClick={handleSkipEspec}>Pular/Cancelar</button>
-              <button className="btn-lime" onClick={handleSaveItem}>Salvar Item</button>
+              <button className="btn-cyan" onClick={handleSkipEspec}>{t('common.cancel')}</button>
+              <button className="btn-lime" onClick={handleSaveItem}>{t('common.save')}</button>
             </div>
           </div>
         </div>
@@ -473,8 +481,8 @@ export default function ExploreView({
       {editingItem && (
         <div className="confirm-overlay" onClick={() => { setEditingItem(null); resetFoto(); }}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
-            <h3 style={{ marginBottom: '16px' }}>Editar {editingItem.type === 'itens' ? 'Item' : editingItem.type === 'locais' ? 'Local' : 'Cômodo'}</h3>
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Nome</label>
+            <h3 style={{ marginBottom: '16px' }}>{t('common.edit')} {editingItem.type === 'itens' ? h4 : editingItem.type === 'locais' ? h3 : h2}</h3>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{t('explore.rename_label')}</label>
             <input 
               className="input-brutal"
               value={editNomeInput}
@@ -484,7 +492,7 @@ export default function ExploreView({
 
             {editingItem.type === 'locais' && (
               <>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Cômodo Atual:</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{h2}:</label>
                 <select 
                   className="input-brutal"
                   value={editComodoIdInput}
@@ -508,7 +516,7 @@ export default function ExploreView({
                   onChange={(e) => setEditParentIdInput(e.target.value)}
                   style={{ marginBottom: '16px', marginTop: '4px', display: 'block', backgroundColor: 'var(--white)', cursor: 'pointer' }}
                 >
-                  <option value="">[Nenhum - Direto no cômodo]</option>
+                  <option value="">—</option>
                   {getValidParents(editingItem.id).map(l => (
                     <option key={l.id} value={l.id}>{l.nome}</option>
                   ))}
@@ -517,7 +525,7 @@ export default function ExploreView({
             )}
 
             {/* Especificação para todos */}
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Especificação</label>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{t('explore.espec_label')}</label>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
               <input 
                 className="input-brutal"
@@ -536,7 +544,7 @@ export default function ExploreView({
             </div>
             
             {/* Secao de Foto para todas as entidades */}
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>Foto</label>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)', display: 'block', marginTop: '8px' }}>{t('explore.photo_label')}</label>
             
             {fotoPreview && (
               <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
@@ -560,7 +568,7 @@ export default function ExploreView({
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 onClick={() => fileInputRefEdit.current?.click()}
               >
-                <IconCamera /> {fotoPreview ? "Substituir Foto" : "Adicionar Foto"}
+                <IconCamera /> {fotoPreview ? t('common.replace') : t('common.add_photo')}
               </button>
               {fotoPreview && (
                 <button 
@@ -573,14 +581,14 @@ export default function ExploreView({
                     setRemoveFoto(true);
                   }}
                 >
-                  <IconDelete /> Apagar Foto
+                  <IconDelete /> {t('common.delete')}
                 </button>
               )}
             </div>
             
             <div className="confirm-actions">
-              <button className="btn-cyan" onClick={() => { setEditingItem(null); resetFoto(); }}>Cancelar</button>
-              <button className="btn-lime" onClick={handleSaveEdit}>Salvar</button>
+              <button className="btn-cyan" onClick={() => { setEditingItem(null); resetFoto(); }}>{t('common.cancel')}</button>
+              <button className="btn-lime" onClick={handleSaveEdit}>{t('common.save')}</button>
             </div>
           </div>
         </div>
@@ -590,15 +598,11 @@ export default function ExploreView({
       {confirmDelete && (
         <div className="confirm-overlay" onClick={() => setConfirmDelete(null)}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Excluir "{confirmDelete.name}"?</h3>
-            <p>
-              {confirmDelete.type === 'comodos' && 'Todos os locais e itens deste cômodo serão excluídos.'}
-              {confirmDelete.type === 'locais' && 'Todos os sub-locais e itens deste local serão excluídos.'}
-              {confirmDelete.type === 'itens' && 'Este item e sua foto (se houver) serão removidos permanentemente.'}
-            </p>
+            <h3>{t('common.delete')} "{confirmDelete.name}"?</h3>
+            <p>⚠️</p>
             <div className="confirm-actions">
-              <button className="btn-cyan" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-              <button className="btn-red" onClick={handleDeleteConfirm}>Excluir</button>
+              <button className="btn-cyan" onClick={() => setConfirmDelete(null)}>{t('common.cancel')}</button>
+              <button className="btn-red" onClick={handleDeleteConfirm}>{t('common.delete')}</button>
             </div>
           </div>
         </div>
@@ -610,7 +614,7 @@ export default function ExploreView({
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '16px' }}>
             <img src={zoomedFoto.url} alt={zoomedFoto.title} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '4px', marginBottom: '16px', border: '3px solid var(--black)' }} />
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', wordBreak: 'break-word' }}>{zoomedFoto.title}</h3>
-            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>OK, Fechar</button>
+            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>{t('common.ok_close')}</button>
           </div>
         </div>
       )}

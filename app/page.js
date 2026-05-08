@@ -9,6 +9,9 @@ import ExploreView from '@/components/ExploreView';
 import SearchView from '@/components/SearchView';
 import VoiceInputOverlay from '@/components/VoiceInputOverlay';
 import { IconSearch, IconHierarchy, IconMic, IconPlus, IconEdit, IconDelete, IconCamera } from '@/components/Icons';
+import { useLanguage, supportedLanguages } from '@/contexts/LanguageContext';
+
+const langToSpeech = { pt: 'pt-BR', en: 'en-US', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', it: 'it-IT', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('explore');
@@ -20,19 +23,17 @@ export default function Home() {
   const [editingCasaId, setEditingCasaId] = useState(null);
   const [editCasaName, setEditCasaName] = useState('');
   const [editCasaEspec, setEditCasaEspec] = useState('');
+  const [editLabels, setEditLabels] = useState({ nivel1: '', nivel2: '', nivel3: '', nivel4: '' });
   const [mounted, setMounted] = useState(false);
   const [isListeningFor, setIsListeningFor] = useState(null);
 
   const startSpecificListening = (target) => {
     if (typeof window === 'undefined') return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Reconhecimento de voz não suportado neste navegador.");
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const rec = new SpeechRecognition();
-    rec.lang = 'pt-BR';
+    rec.lang = langToSpeech[lang] || 'en-US';
     rec.continuous = false;
     rec.interimResults = false;
 
@@ -49,6 +50,9 @@ export default function Home() {
         setNewCasaName(text);
       } else if (target === 'editCasaNome') {
         setEditCasaName(text);
+      } else if (target.startsWith('editLabel_')) {
+        const key = target.replace('editLabel_', '');
+        setEditLabels(prev => ({ ...prev, [key]: text }));
       }
     };
 
@@ -85,6 +89,7 @@ export default function Home() {
 
   const { user, loading: authLoading, signOut } = useAuth();
   const db = useDatabase(user);
+  const { t, lang, changeLanguage } = useLanguage();
 
   useEffect(() => {
     setMounted(true);
@@ -110,9 +115,12 @@ export default function Home() {
   };
 
   const getVoiceContextLabel = () => {
-    if (level === 1) return 'Adicionando novo cômodo';
-    if (level === 2 && currentComodo) return `Adicionando local em "${currentComodo.nome}"`;
-    if (level === 3 && currentLocal) return `Adicionando item em "${currentLocal.nome}"`;
+    const h2 = t('hierarchy.level2', db.currentCasa);
+    const h3 = t('hierarchy.level3', db.currentCasa);
+    const h4 = t('hierarchy.level4', db.currentCasa);
+    if (level === 1) return `${t('common.add')} ${h2}`;
+    if (level === 2 && currentComodo) return t('voice.adding_in', null, [currentComodo.nome]);
+    if (level === 3 && currentLocal) return t('voice.adding_in', null, [currentLocal.nome]);
     return '';
   };
 
@@ -120,7 +128,7 @@ export default function Home() {
     return (
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="card card-static" style={{ textAlign: 'center', padding: '40px' }}>
-          <h2>Carregando...</h2>
+          <h2>{t('common.loading')}</h2>
         </div>
       </main>
     );
@@ -155,7 +163,7 @@ export default function Home() {
             <span style={{ fontSize: '1.2rem' }}>🏠</span>
           )}
           <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--blue)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {db.currentCasa ? db.currentCasa.nome : 'Nova Casa...'}
+            {db.currentCasa ? db.currentCasa.nome : 'INDEXIA'}
           </h3>
           <span style={{ fontSize: '0.8rem', color: 'var(--gray)' }}>▼</span>
         </div>
@@ -187,12 +195,14 @@ export default function Home() {
           setCurrentComodo={setCurrentComodo}
           currentLocal={currentLocal}
           setCurrentLocal={setCurrentLocal}
+          currentCasa={db.currentCasa}
         />
       ) : (
         <SearchView 
           itens={db.itens}
           locais={db.locais}
           comodos={db.comodos}
+          currentCasa={db.currentCasa}
           onNavigate={(targetLevel, c, l) => {
             if (c) setCurrentComodo(c);
             if (l) setCurrentLocal(l);
@@ -216,14 +226,14 @@ export default function Home() {
           onClick={() => { setActiveTab('explore'); }}
         >
           <IconHierarchy />
-          <span>Explorar</span>
+          <span>{t('common.explore')}</span>
         </div>
         <div 
           className={`nav-item ${activeTab === 'search' ? 'active' : ''}`}
           onClick={() => setActiveTab('search')}
         >
           <IconSearch />
-          <span>Buscar</span>
+          <span>{t('common.search')}</span>
         </div>
       </nav>
 
@@ -245,7 +255,7 @@ export default function Home() {
         }}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left', maxHeight: '80vh', overflowY: 'auto', width: '90%', maxWidth: '400px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0 }}>Minhas Casas</h3>
+              <h3 style={{ margin: 0 }}>{t('casas.my_casas')}</h3>
               <button className="btn-ghost" onClick={() => setIsCasaMenuOpen(false)}>✕</button>
             </div>
             
@@ -290,7 +300,7 @@ export default function Home() {
                         {casa.especificacao && <span style={{ fontSize: '0.8rem', color: 'var(--gray)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{casa.especificacao}</span>}
                       </div>
                     </div>
-                    {db.currentCasa?.id === casa.id && <span style={{ fontSize: '0.75rem', color: 'var(--blue)', marginTop: '2px' }}>🏠 Atual</span>}
+                    {db.currentCasa?.id === casa.id && <span style={{ fontSize: '0.75rem', color: 'var(--blue)', marginTop: '2px' }}>✓ {t('casas.current')}</span>}
                   </div>
                   
                   <div style={{ display: 'flex', gap: '8px', marginLeft: '12px' }} onClick={e => e.stopPropagation()}>
@@ -298,6 +308,12 @@ export default function Home() {
                       setEditingCasaId(casa.id); 
                       setEditCasaName(casa.nome);
                       setEditCasaEspec(casa.especificacao || '');
+                      setEditLabels({
+                        nivel1: casa.label_nivel1 || '',
+                        nivel2: casa.label_nivel2 || '',
+                        nivel3: casa.label_nivel3 || '',
+                        nivel4: casa.label_nivel4 || '',
+                      });
                       setFotoPreview(casa.foto_url || null);
                       setFotoBlob(null);
                       setRemoveFoto(false);
@@ -305,7 +321,7 @@ export default function Home() {
                       <IconEdit />
                     </button>
                     {db.casas.length > 1 && (
-                      <button className="delete-btn" style={{ padding: '6px' }} onClick={() => { if(confirm(`Excluir a casa "${casa.nome}"?`)) db.deleteCasa(casa.id); }}>
+                      <button className="delete-btn" style={{ padding: '6px' }} onClick={() => { if(confirm(`${t('common.delete')} "${casa.nome}"?`)) db.deleteCasa(casa.id); }}>
                         <IconDelete />
                       </button>
                     )}
@@ -316,7 +332,7 @@ export default function Home() {
 
             {editingCasaId ? (
               <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '4px', border: '2px solid var(--black)' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Editar Nome</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>{t('explore.rename_label')}</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
                   <input 
                     className="input-brutal" 
@@ -335,13 +351,13 @@ export default function Home() {
                 </div>
 
                 {/* Especificação para Casas no Edit */}
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Especificação</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>{t('explore.espec_label')}</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '4px' }}>
                   <input 
                     className="input-brutal" 
                     value={editCasaEspec}
                     onChange={e => setEditCasaEspec(e.target.value)} 
-                    placeholder="Ex: Casa de praia alugada"
+                    placeholder={t('casas.espec_placeholder')}
                     style={{ flex: 1, background: 'var(--white)' }}
                   />
                   <button 
@@ -354,7 +370,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Foto da Casa</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>{t('casas.photo')}</label>
                 {fotoPreview && (
                   <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 10px 0' }}>
                     <img src={fotoPreview} alt="Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', border: '2px solid var(--black)', borderRadius: 'var(--radius)' }} />
@@ -375,7 +391,7 @@ export default function Home() {
                     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px' }}
                     onClick={() => fileInputRefEditCasa.current?.click()}
                   >
-                    <IconCamera /> {fotoPreview ? "Substituir" : "Adicionar Foto"}
+                    <IconCamera /> {fotoPreview ? t('common.replace') : t('common.add_photo')}
                   </button>
                   {fotoPreview && (
                     <button 
@@ -393,29 +409,51 @@ export default function Home() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Custom Labels */}
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginTop: '8px', marginBottom: '8px' }}>{t('casas.custom_names')}</label>
+                {['nivel1', 'nivel2', 'nivel3', 'nivel4'].map((key, idx) => (
+                  <div key={key} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      className="input-brutal"
+                      placeholder={t(`casas.level${idx + 1}_label`)}
+                      value={editLabels[key]}
+                      onChange={e => setEditLabels(prev => ({ ...prev, [key]: e.target.value }))}
+                      style={{ flex: 1, background: 'var(--white)' }}
+                    />
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      style={{ backgroundColor: isListeningFor === `editLabel_${key}` ? 'var(--blue)' : 'var(--cyan)', padding: '0 12px' }}
+                      onClick={() => startSpecificListening(`editLabel_${key}`)}
+                    >
+                      <IconMic />
+                    </button>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                   <button className="btn-cyan" style={{ flex: 1 }} onClick={() => {
                     setEditingCasaId(null);
                     setFotoPreview(null);
                     setFotoBlob(null);
-                  }}>Cancelar</button>
+                  }}>{t('common.cancel')}</button>
                   <button className="btn-lime" style={{ flex: 1 }} onClick={() => {
                     if (editCasaName.trim()) {
-                      db.updateCasa(editingCasaId, editCasaName, editCasaEspec, fotoBlob, removeFoto);
+                  db.updateCasa(editingCasaId, editCasaName, editCasaEspec, fotoBlob, removeFoto, editLabels);
                       setEditingCasaId(null);
                       setFotoPreview(null);
                       setFotoBlob(null);
                     }
-                  }}>Salvar</button>
+                  }}>{t('common.save')}</button>
                 </div>
               </div>
             ) : (
               <div style={{ borderTop: '2px dashed var(--black)', paddingTop: '16px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Nova Casa / Projeto</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>{t('casas.new_casa')}</label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', marginTop: '4px' }}>
                   <input 
                     className="input-brutal" 
-                    placeholder="Ex: Casa de Praia"
+                    placeholder={t('casas.name_placeholder')}
                     value={newCasaName} 
                     onChange={e => setNewCasaName(e.target.value)} 
                     style={{ flex: 1 }}
@@ -432,7 +470,7 @@ export default function Home() {
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                   <input 
                     className="input-brutal" 
-                    placeholder="Especificação (opcional)"
+                    placeholder={t('casas.espec_placeholder')}
                     value={newCasaEspec} 
                     onChange={e => setNewCasaEspec(e.target.value)} 
                     style={{ flex: 1 }}
@@ -453,7 +491,7 @@ export default function Home() {
                     setNewCasaEspec('');
                   }
                 }}>
-                  + Criar
+                  + {t('casas.create_btn')}
                 </button>
               </div>
             )}
@@ -464,11 +502,27 @@ export default function Home() {
       {isUserMenuOpen && (
         <div className="confirm-overlay" onClick={() => setIsUserMenuOpen(false)}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
-            <h3 style={{ marginBottom: '4px' }}>Menu do Usuário</h3>
-            <p style={{ color: 'var(--gray)', fontSize: '0.85rem', marginBottom: '20px' }}>Logado como: {user.email}</p>
+            <h3 style={{ marginBottom: '4px' }}>{t('userMenu.title')}</h3>
+            <p style={{ color: 'var(--gray)', fontSize: '0.85rem', marginBottom: '20px' }}>{t('userMenu.logged_in_as')} {user.email}</p>
             
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{t('userMenu.language')}</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '24px' }}>
+              {supportedLanguages.map(sl => (
+                <button
+                  key={sl.code}
+                  className={lang === sl.code ? 'btn-lime' : 'btn-cyan'}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                  onClick={() => changeLanguage(sl.code)}
+                >
+                  {sl.icon} {sl.name}
+                </button>
+              ))}
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '2px solid var(--black)', margin: '0 -20px 20px -20px' }} />
+
             <button onClick={signOut} className="btn-red" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-              Sair da Conta
+              {t('userMenu.logout')}
             </button>
           </div>
         </div>
@@ -480,7 +534,7 @@ export default function Home() {
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '16px' }}>
             <img src={zoomedFoto.url} alt={zoomedFoto.title} style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '4px', marginBottom: '16px', border: '3px solid var(--black)' }} />
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', wordBreak: 'break-word' }}>{zoomedFoto.title}</h3>
-            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>OK, Fechar</button>
+            <button className="btn-cyan" onClick={() => setZoomedFoto(null)} style={{ width: '100%' }}>{t('common.ok_close')}</button>
           </div>
         </div>
       )}

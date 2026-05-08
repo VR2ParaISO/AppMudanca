@@ -56,10 +56,17 @@ export function useDatabase(user) {
   };
 
   // ===== CASAS =====
-  const addCasa = useCallback(async (nome, especificacao = '') => {
+  const addCasa = useCallback(async (nome, especificacao = '', labels = {}) => {
     const { data, error } = await supabase
       .from('casas')
-      .insert({ nome: nome.trim(), especificacao })
+      .insert({
+        nome: nome.trim(),
+        especificacao,
+        label_nivel1: labels.nivel1 || null,
+        label_nivel2: labels.nivel2 || null,
+        label_nivel3: labels.nivel3 || null,
+        label_nivel4: labels.nivel4 || null,
+      })
       .select()
       .single();
 
@@ -72,8 +79,15 @@ export function useDatabase(user) {
     return data;
   }, []);
 
-  const updateCasa = useCallback(async (id, newNome, newEspecificacao = '', newFotoBlob = null, removeFoto = false) => {
-    let updatePayload = { nome: newNome.trim(), especificacao: newEspecificacao };
+  const updateCasa = useCallback(async (id, newNome, newEspecificacao = '', newFotoBlob = null, removeFoto = false, labels = {}) => {
+    let updatePayload = {
+      nome: newNome.trim(),
+      especificacao: newEspecificacao,
+      label_nivel1: labels.nivel1 ?? null,
+      label_nivel2: labels.nivel2 ?? null,
+      label_nivel3: labels.nivel3 ?? null,
+      label_nivel4: labels.nivel4 ?? null,
+    };
     const oldCasa = casas.find(c => c.id === id);
 
     if (removeFoto && !newFotoBlob) {
