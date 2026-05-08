@@ -34,9 +34,14 @@ export function useDatabase(user) {
       if (csRes.data) {
         setCasas(csRes.data);
         if (csRes.data.length > 0) {
-          // Mantém a casa selecionada atual (se ainda existir) ou pega a primeira
+          // Mantém a casa selecionada atual (se ainda existir), pega a salva no perfil, ou a primeira
+          const lastCasaId = user?.user_metadata?.last_casa_id;
           setCurrentCasa(prev => {
             if (prev && csRes.data.find(c => c.id === prev.id)) return prev;
+            if (lastCasaId) {
+              const found = csRes.data.find(c => c.id === lastCasaId);
+              if (found) return found;
+            }
             return csRes.data[0];
           });
         }
@@ -61,6 +66,9 @@ export function useDatabase(user) {
     if (error) { console.error('addCasa error:', error); return; }
     setCasas(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)));
     setCurrentCasa(data);
+    if (user) {
+      supabase.auth.updateUser({ data: { last_casa_id: data.id } }).catch(e => console.error(e));
+    }
     return data;
   }, []);
 
@@ -112,12 +120,16 @@ export function useDatabase(user) {
 
     setCasas(prev => {
       const novasCasas = prev.filter(c => c.id !== id);
-      setCurrentCasa(novasCasas.length > 0 ? novasCasas[0] : null);
+      const nextCasa = novasCasas.length > 0 ? novasCasas[0] : null;
+      setCurrentCasa(nextCasa);
+      if (user && currentCasa?.id === id) {
+        supabase.auth.updateUser({ data: { last_casa_id: nextCasa ? nextCasa.id : null } }).catch(e => console.error(e));
+      }
       return novasCasas;
     });
     // Opcional: remover os cômodos, locais e itens do estado local, mas um reload/loadAll seria melhor ou apenas filtrar
     setComodos(prev => prev.filter(c => c.casa_id !== id));
-  }, []);
+  }, [casas, currentCasa, user]);
 
   // ===== COMODOS =====
   const addComodo = useCallback(async (nome, especificacao = '') => {
@@ -366,10 +378,17 @@ export function useDatabase(user) {
     totalItens: filteredItens.length,
   }), [casas, filteredComodos, filteredLocais, filteredItens]);
 
+  const setAndSaveCurrentCasa = useCallback((casa) => {
+    setCurrentCasa(casa);
+    if (casa && user) {
+      supabase.auth.updateUser({ data: { last_casa_id: casa.id } }).catch(e => console.error(e));
+    }
+  }, [user]);
+
   return {
     casas,
     currentCasa,
-    setCurrentCasa,
+    setCurrentCasa: setAndSaveCurrentCasa,
     addCasa,
     updateCasa,
     deleteCasa,

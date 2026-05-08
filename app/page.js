@@ -20,7 +20,6 @@ export default function Home() {
   const [editingCasaId, setEditingCasaId] = useState(null);
   const [editCasaName, setEditCasaName] = useState('');
   const [editCasaEspec, setEditCasaEspec] = useState('');
-  const [appTitleInput, setAppTitleInput] = useState('');
   const [mounted, setMounted] = useState(false);
   const [isListeningFor, setIsListeningFor] = useState(null);
 
@@ -117,20 +116,6 @@ export default function Home() {
     return '';
   };
 
-  const handleSaveTitle = async () => {
-    if (!appTitleInput.trim()) return;
-    const { error } = await supabase.auth.updateUser({
-      data: { app_title: appTitleInput.trim() }
-    });
-    if (!error) {
-      setIsUserMenuOpen(false);
-      // O hook useAuth atualizará o user automaticamente na maioria das vezes, mas forçamos reload se preciso
-      window.location.reload(); 
-    } else {
-      alert("Erro ao salvar o nome.");
-    }
-  };
-
   if (!mounted || authLoading || (user && !db.isLoaded)) {
     return (
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -145,7 +130,6 @@ export default function Home() {
     return <AuthView />;
   }
 
-  const appTitle = user?.user_metadata?.app_title || 'OrganizaMudança';
   const initial = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
 
   return (
@@ -177,7 +161,6 @@ export default function Home() {
         </div>
         <div 
           onClick={() => {
-            setAppTitleInput(appTitle);
             setIsUserMenuOpen(true);
           }} 
           style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--black)', color: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', cursor: 'pointer', border: '2px solid var(--black)' }}
@@ -484,21 +467,6 @@ export default function Home() {
             <h3 style={{ marginBottom: '4px' }}>Menu do Usuário</h3>
             <p style={{ color: 'var(--gray)', fontSize: '0.85rem', marginBottom: '20px' }}>Logado como: {user.email}</p>
             
-            <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>Nome do Aplicativo</label>
-            <input 
-              className="input-brutal"
-              value={appTitleInput}
-              onChange={(e) => setAppTitleInput(e.target.value)}
-              placeholder="Ex: Minha Mudança"
-              style={{ marginBottom: '16px', marginTop: '4px' }}
-            />
-            
-            <button className="btn-lime" onClick={handleSaveTitle} style={{ width: '100%', marginBottom: '24px' }}>
-              Salvar Nome
-            </button>
-
-            <hr style={{ border: 'none', borderTop: '2px solid var(--black)', margin: '0 -20px 20px -20px' }} />
-
             <button onClick={signOut} className="btn-red" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
               Sair da Conta
             </button>
