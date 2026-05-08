@@ -521,8 +521,11 @@ export default function Home() {
 
             <hr style={{ border: 'none', borderTop: '2px solid var(--black)', margin: '0 -20px 20px -20px' }} />
 
-            <button onClick={signOut} className="btn-red" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <button onClick={signOut} className="btn-red" style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
               {t('userMenu.logout')}
+            </button>
+            <button onClick={() => setIsUserMenuOpen(false)} className="btn-lime" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              {t('common.ok_close')}
             </button>
           </div>
         </div>
