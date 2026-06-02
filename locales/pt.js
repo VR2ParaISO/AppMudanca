@@ -68,7 +68,8 @@ export default {
     new_placeholder: "Nome do(a) novo(a) {0}",
     rename_label: "Editar Nome",
     espec_label: "Especificação",
-    photo_label: "Foto"
+    photo_label: "Foto",
+    select_valid_local: "Selecione um local válido."
   },
   voice: {
     listening: "Ouvindo... Fale agora",

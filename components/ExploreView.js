@@ -142,11 +142,20 @@ export default function ExploreView({
   };
 
   const handleEditClick = (type, item) => {
-    setEditingItem({ type, id: item.id, comodo_id: item.comodo_id });
+    let comodoId = item.comodo_id || '';
+    let parentLocalId = item.parent_local_id || '';
+    
+    if (type === 'itens') {
+      const associatedLocal = locais.find(l => l.id === item.local_id);
+      comodoId = associatedLocal ? associatedLocal.comodo_id : '';
+      parentLocalId = item.local_id || '';
+    }
+
+    setEditingItem({ type, id: item.id, comodo_id: comodoId });
     setEditNomeInput(item.nome);
     setEditEspecInput(item.especificacao || '');
-    setEditParentIdInput(item.parent_local_id || '');
-    setEditComodoIdInput(item.comodo_id || '');
+    setEditParentIdInput(parentLocalId);
+    setEditComodoIdInput(comodoId);
     
     // Todas as entidades agora suportam foto
     setFotoPreview(item.foto_url || null);
@@ -159,7 +168,11 @@ export default function ExploreView({
     if (!editNomeInput.trim()) return;
 
     if (editingItem.type === 'itens') {
-      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), fotoBlob, removeFoto);
+      if (!editParentIdInput) {
+        alert(t('explore.select_valid_local') || 'Por favor, selecione um local válido.');
+        return;
+      }
+      updateItem(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), editParentIdInput, fotoBlob, removeFoto);
     } else if (editingItem.type === 'locais') {
       updateLocal(editingItem.id, editNomeInput.trim(), editEspecInput.trim(), editParentIdInput || null, editComodoIdInput, fotoBlob, removeFoto);
     } else if (editingItem.type === 'comodos') {
@@ -480,7 +493,7 @@ export default function ExploreView({
       {/* Edit Dialog (Comodos, Locais, Itens) */}
       {editingItem && (
         <div className="confirm-overlay" onClick={() => { setEditingItem(null); resetFoto(); }}>
-          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left' }}>
+          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'left', maxHeight: '90vh', overflowY: 'auto', width: '95%', maxWidth: '400px' }}>
             <h3 style={{ marginBottom: '16px' }}>{t('common.edit')} {editingItem.type === 'itens' ? h4 : editingItem.type === 'locais' ? h3 : h2}</h3>
             <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{t('explore.rename_label')}</label>
             <input 
@@ -489,6 +502,57 @@ export default function ExploreView({
               onChange={(e) => setEditNomeInput(e.target.value)}
               style={{ marginBottom: '16px', marginTop: '4px' }}
             />
+
+            {editingItem.type === 'itens' && (
+              <>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{h2}:</label>
+                <select 
+                  className="input-brutal"
+                  value={editComodoIdInput}
+                  onChange={(e) => {
+                    const newComodoId = e.target.value;
+                    setEditComodoIdInput(newComodoId);
+                    // Filter locais in the new comodo
+                    const roomLocals = locais.filter(l => l.comodo_id === newComodoId);
+                    if (roomLocals.length > 0) {
+                      setEditParentIdInput(roomLocals[0].id);
+                    } else {
+                      setEditParentIdInput('');
+                    }
+                  }}
+                  style={{ marginBottom: '16px', marginTop: '4px', display: 'block', backgroundColor: 'var(--white)', cursor: 'pointer' }}
+                >
+                  {comodos.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray)' }}>{h3}:</label>
+                <select 
+                  className="input-brutal"
+                  value={editParentIdInput}
+                  onChange={(e) => setEditParentIdInput(e.target.value)}
+                  style={{ marginBottom: '16px', marginTop: '4px', display: 'block', backgroundColor: 'var(--white)', cursor: 'pointer' }}
+                >
+                  {locais.filter(l => l.comodo_id === editComodoIdInput).length === 0 ? (
+                    <option value="">— Sem locais neste cômodo —</option>
+                  ) : (
+                    locais.filter(l => l.comodo_id === editComodoIdInput).map(l => {
+                      let displayName = l.nome;
+                      if (l.parent_local_id) {
+                        const parent = locais.find(p => p.id === l.parent_local_id);
+                        if (parent) {
+                          displayName = `${l.nome} (${parent.nome})`;
+                        }
+                      }
+                      return (
+                        <option key={l.id} value={l.id}>{displayName}</option>
+                      );
+                    })
+                  )}
+                </select>
+              </>
+            )}
 
             {editingItem.type === 'locais' && (
               <>

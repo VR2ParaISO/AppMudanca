@@ -300,8 +300,8 @@ export function useDatabase(user) {
     return data;
   }, [user]);
 
-  const updateItem = useCallback(async (id, newNome, newEspecificacao, newFotoBlob = null, removeFoto = false) => {
-    let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao };
+  const updateItem = useCallback(async (id, newNome, newEspecificacao, newLocalId, newFotoBlob = null, removeFoto = false) => {
+    let updatePayload = { nome: newNome.toUpperCase(), especificacao: newEspecificacao, local_id: newLocalId };
     
     const oldItem = itens.find(i => i.id === id);
 
